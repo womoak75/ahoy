@@ -24,6 +24,7 @@
 #include "mqtt.h"
 #include "ahoywifi.h"
 #include "web.h"
+#include "thirdpartyapp.h"
 
 // convert degrees and radians for sun calculation
 #define SIN(x) (sin(radians(x)))
@@ -63,6 +64,9 @@ class app {
         bool getWifiApActive(void);
         void scanAvailNetworks(void);
         void getAvailNetworks(JsonObject obj);
+        void setThirdpartyApp(thirdpartyApp* _tpApp) {
+            tpApp = _tpApp;
+        }
 
         uint8_t getIrqPin(void) {
             return mConfig.pinIrq;
@@ -298,6 +302,9 @@ class app {
         uint32_t mSunrise;
         uint32_t mSunset;
         uint32_t mLatestSunTimestamp;
+
+        // thirdparty
+        thirdpartyApp *tpApp = nullptr;
 };
 
 #endif /*__APP_H__*/

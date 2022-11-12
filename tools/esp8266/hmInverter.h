@@ -253,6 +253,9 @@ class Inverter {
                             else
                                 rec->record[pos] = (REC_TYP)(val);
                         }
+                        if(tpCallback) {
+                            tpCallback(id,rec->assign[pos].fieldId,rec->record[pos]);
+                        }
                     }
                 }
 
@@ -479,6 +482,10 @@ class Inverter {
             }
         }
 
+        void setThirdpartyCallback(std::function<void(uint8_t id, uint8_t fieldid, float value)> callback) {
+            tpCallback = callback;
+        }
+
     private:
         std::queue<std::shared_ptr<CommandAbstract>> _commandQueue;
         void toRadioId(void) {
@@ -490,8 +497,8 @@ class Inverter {
             radioId.b[1] = serial.b[3];
             radioId.b[0] = 0x01;
         }
+        std::function<void(uint8_t inverterId, uint8_t fieldId, float value)> tpCallback = nullptr;
 };
-
 
 /**
  * To calculate values which are not transmitted by the unit there is a generic

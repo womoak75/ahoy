@@ -44,6 +44,17 @@ void app::setup(uint32_t timeout) {
 
     mWebInst = new web(this, &mSysConfig, &mConfig, &mStat, mVersion);
     mWebInst->setup();
+
+    if(tpApp) {
+        tpApp->setup(this);
+        Inverter<> *iv;
+        for (uint8_t i = 0; i < MAX_NUM_INVERTERS; i++) {
+            iv = mSys->getInverterByPos(i, false);
+            if (NULL != iv) {
+                iv->setThirdpartyCallback(std::bind(&thirdpartyApp::inverterCallback,tpApp,std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+            }
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -258,6 +269,9 @@ void app::loop(void) {
                 DPRINTLN(DBG_WARN, F("Time not set or it is night time, therefore no communication to the inverter!"));
             yield();
         }
+    }
+    if(tpApp) {
+        tpApp->loop(this);
     }
 }
 
