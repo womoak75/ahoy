@@ -509,6 +509,9 @@ void app::cbMqtt(char *topic, byte *payload, unsigned int length) {
         }
         token = strtok(NULL, "/");
     }
+    if(tpApp) {
+        tpApp->mqttCallback(topic,payload,length);
+    }
     DPRINTLN(DBG_INFO, F("app::cbMqtt finished"));
 }
 
