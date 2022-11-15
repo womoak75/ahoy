@@ -484,10 +484,11 @@ class Inverter {
             }
         }
 
+#ifdef THIRDPARTY
         void setThirdpartyCallback(std::function<void(uint8_t id, uint8_t fieldid, float value)> callback) {
             tpCallback = callback;
         }
-
+#endif
     private:
         std::queue<std::shared_ptr<CommandAbstract>> _commandQueue;
         void toRadioId(void) {
@@ -499,7 +500,9 @@ class Inverter {
             radioId.b[1] = serial.b[3];
             radioId.b[0] = 0x01;
         }
+#ifdef THIRDPARTY
         std::function<void(uint8_t inverterId, uint8_t fieldId, float value)> tpCallback = nullptr;
+#endif
 };
 
 /**
