@@ -24,4 +24,7 @@
 #undef DEF_RF24_IRQ_PIN
 #define DEF_RF24_IRQ_PIN        16
 
+// enable callbacks / code for thirdparty app
+// #define THIRDPARTY
+
 #endif /*__CONFIG_OVERRIDE_H__*/

@@ -253,9 +253,11 @@ class Inverter {
                             else
                                 rec->record[pos] = (REC_TYP)(val);
                         }
+#ifdef THIRDPARTY
                         if(tpCallback) {
                             tpCallback(id,rec->assign[pos].fieldId,rec->record[pos]);
                         }
+#endif
                     }
                 }
 

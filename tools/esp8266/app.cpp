@@ -45,6 +45,7 @@ void app::setup(uint32_t timeout) {
     mWebInst = new web(this, &mSysConfig, &mConfig, &mStat, mVersion);
     mWebInst->setup();
 
+#ifdef THIRDPARTY
     if(tpApp) {
         tpApp->setup(this);
         Inverter<> *iv;
@@ -55,6 +56,7 @@ void app::setup(uint32_t timeout) {
             }
         }
     }
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -270,9 +272,11 @@ void app::loop(void) {
             yield();
         }
     }
+#ifdef THIRDPARTY
     if(tpApp) {
         tpApp->loop(this);
     }
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -509,9 +513,11 @@ void app::cbMqtt(char *topic, byte *payload, unsigned int length) {
         }
         token = strtok(NULL, "/");
     }
+#ifdef THIRDPARTY
     if(tpApp) {
         tpApp->mqttCallback(topic,payload,length);
     }
+#endif
     DPRINTLN(DBG_INFO, F("app::cbMqtt finished"));
 }
 

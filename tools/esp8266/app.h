@@ -64,10 +64,11 @@ class app {
         bool getWifiApActive(void);
         void scanAvailNetworks(void);
         void getAvailNetworks(JsonObject obj);
+#ifdef THIRDPARTY
         void setThirdpartyApp(thirdpartyApp* _tpApp) {
             tpApp = _tpApp;
         }
-
+#endif
         uint8_t getIrqPin(void) {
             return mConfig.pinIrq;
         }
@@ -303,8 +304,10 @@ class app {
         uint32_t mSunset;
         uint32_t mLatestSunTimestamp;
 
+#ifdef THIRDPARTY
         // thirdparty
         thirdpartyApp *tpApp = nullptr;
+#endif
 };
 
 #endif /*__APP_H__*/
