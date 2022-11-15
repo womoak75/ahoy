@@ -115,6 +115,11 @@ class mqtt {
                         snprintf(topic, MQTT_TOPIC_LEN + 13, "%s/devcontrol/#", mCfg->topic);
                         DPRINTLN(DBG_INFO, F("subscribe to ") + String(topic));
                         mClient->subscribe(topic); // subscribe to mTopic + "/devcontrol/#"
+#ifdef THIRDPARTY
+                        snprintf(topic, MQTT_TOPIC_LEN + 13, "%s/thirdparty/#", mCfg->topic);
+                        DPRINTLN(DBG_INFO, F("subscribe to ") + String(topic));
+                        mClient->subscribe(topic); // subscribe to mTopic + "/devcontrol/#"
+#endif
                     }
                 }
             }
