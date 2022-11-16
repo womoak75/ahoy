@@ -68,6 +68,9 @@ void web::setup(void) {
                                            std::bind(&web::showUpdate2,    this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4, std::placeholders::_5, std::placeholders::_6));
     mWeb->on("/serial",         HTTP_GET,  std::bind(&web::onSerial,       this, std::placeholders::_1));
 
+#ifdef THIRDPARTY
+    mWeb->on("/thirdparty",         HTTP_ANY,  std::bind(&thirdpartyApp::onWebRequest,mMain->getThirdpartyApp(), std::placeholders::_1));
+#endif
 
     mEvts->onConnect(std::bind(&web::onConnect, this, std::placeholders::_1));
     mWeb->addHandler(mEvts);

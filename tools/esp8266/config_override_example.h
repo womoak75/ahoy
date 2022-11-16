@@ -27,4 +27,7 @@
 // enable callbacks / code for thirdparty app
 // #define THIRDPARTY
 
+// app name which will be diplayed in webgui menu
+// define THIRDPARTY_MENUNAME "ThirdpartyApp"
+
 #endif /*__CONFIG_OVERRIDE_H__*/

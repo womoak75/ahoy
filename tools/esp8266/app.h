@@ -68,6 +68,9 @@ class app {
         void setThirdpartyApp(thirdpartyApp* _tpApp) {
             tpApp = _tpApp;
         }
+        thirdpartyApp* getThirdpartyApp() {
+            return tpApp;
+        }
 #endif
         uint8_t getIrqPin(void) {
             return mConfig.pinIrq;

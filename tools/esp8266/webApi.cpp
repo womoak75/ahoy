@@ -57,6 +57,9 @@ void webApi::onApi(AsyncWebServerRequest *request) {
     else if(path == "record/alarm")   getRecord(root, iv->getRecordStruct(AlarmData));
     else if(path == "record/config")  getRecord(root, iv->getRecordStruct(SystemConfigPara));
     else if(path == "record/live")    getRecord(root, iv->getRecordStruct(RealTimeRunData_Debug));
+#ifdef THIRDPARTY
+    else if(path == "thirdparty" && mApp->getThirdpartyApp() != nullptr) mApp->getThirdpartyApp()->onApiGet(request,root);
+#endif
     else
         getNotFound(root, F("http://") + request->host() + F("/api/"));
 
@@ -88,6 +91,10 @@ void webApi::onApiPostBody(AsyncWebServerRequest *request, uint8_t *data, size_t
             root[F("success")] = setCtrl(json, root);
         else if(path == "setup")
             root[F("success")] = setSetup(json, root);
+#ifdef THIRDPARTY
+        else if(path == "thirdparty" && mApp->getThirdpartyApp() != nullptr)
+            root[F("success")] = mApp->getThirdpartyApp()->onApiPost(json,root);
+#endif
         else {
             root[F("success")] = false;
             root[F("error")]   = "Path not found: " + path;
@@ -120,6 +127,9 @@ void webApi::getNotFound(JsonObject obj, String url) {
     ep[F("record/alarm")]  = url + F("record/alarm");
     ep[F("record/config")] = url + F("record/config");
     ep[F("record/live")]   = url + F("record/live");
+#ifdef THIRDPARTY
+    ep[F("thirdparty")]     = url + F("thirdparty");
+#endif
 }
 
 
@@ -259,6 +269,14 @@ void webApi::getMenu(JsonObject obj) {
     obj["link"][6] = "/update";
     obj["name"][7] = "System";
     obj["link"][7] = "/system";
+#ifdef THIRDPARTY
+#ifndef THIRDPARTY_MENUNAME
+    obj["name"][7] = "Thirdparty";
+#else
+    obj["name"][7] = THIRDPARTY_MENUNAME;
+#endif
+    obj["link"][7] = "/thirdparty";
+#endif
 }
 
 
