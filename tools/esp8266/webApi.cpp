@@ -271,11 +271,11 @@ void webApi::getMenu(JsonObject obj) {
     obj["link"][7] = "/system";
 #ifdef THIRDPARTY
 #ifndef THIRDPARTY_MENUNAME
-    obj["name"][7] = "Thirdparty";
+    obj["name"][8] = "Thirdparty";
 #else
-    obj["name"][7] = THIRDPARTY_MENUNAME;
+    obj["name"][8] = THIRDPARTY_MENUNAME;
 #endif
-    obj["link"][7] = "/thirdparty";
+    obj["link"][8] = "/thirdparty";
 #endif
 }
 
