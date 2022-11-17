@@ -22,6 +22,7 @@
     - [Connect to the Ahoy DTU Webinterface using your Browser](#connect-to-the-ahoy-dtu-webinterface-using-your-browser)
       - [HTTP based Pages](#http-based-pages)
 - [MQTT command to set the DTU without webinterface](#mqtt-command-to-set-the-dtu-without-webinterface)
+- [Add custom code](#add-custom-code)
 - [Used Libraries](#used-libraries)
 - [Contact](#contact)
 - [ToDo](#todo)
@@ -235,6 +236,81 @@ When everything is wired up and the firmware is flashed, it is time to connect t
 ## MQTT command to set the DTU without webinterface
 
 [Read here](User_Manual.md)
+
+## Add custom code
+
+Extend your custom code class from 'thirdpartyApp'
+
+```cpp
+#ifndef __MYCUSTOMCODE_H__
+#define __MYCUSTOMCODE_H__
+
+#include "thirdpartyapp.h"
+
+class MyCustomCode : public thirdpartyApp
+{
+public:
+    void setup(app *app) {
+        // setup
+    }
+    void loop(app *app) {
+        // main loop
+        char topic[] = "mycustomcode/out";
+        char payload[] = "ahoi world!";
+        static unsigned long last = 0;
+        if((millis()-last)>=55000) {
+          last = millis();
+          // send mqtt message to 'DEF_MQTT_TOPIC/mycustomcode/out'
+          // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
+          enqueueMessage(topic,payload);
+          // send mqtt message to 'mycustomcode/out'
+          enqueueMessage(topic,payload,false);
+          // ATTENTION:
+          // mqtt messages will be processed every MQTT_INTERVAL seconds by ahoi app
+          // default is 60s - (see config.h)
+        }
+     }
+     void inverterCallback(uint8_t inverterId, uint8_t fieldId, float value) {
+        // receice inverter data
+     }
+     void mqttCallback(char *topic, byte *payload, unsigned int length) {
+         // receive data for
+         // ahoi topic: 'DEF_MQTT_TOPIC/devcontrol/#'
+         // thirdparty topic: 'DEF_MQTT_TOPIC/thirdparty/#'
+         // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
+     }
+};
+
+#endif /*__MYCUSTOMCODE_H__*/
+```
+
+and add to main.cpp
+
+```cpp
+#include "dbg.h"
+#include "app.h"
+// include headerfile
+#include "mycustomcode.h"
+#include "config.h"
+
+
+app myApp;
+// instance
+MyCustomCode custom;
+
+...
+
+//-----------------------------------------------------------------------------
+void setup() {
+    // add to main app
+    myApp.setThirdpartyApp(&custom);
+    myApp.setup(WIFI_TRY_CONNECT_TIME);
+
+    ...
+}
+
+```
+
 
 ## Used Libraries
 
