@@ -6,6 +6,10 @@
 #ifndef __THIRDPARTYAPP_H__
 #define __THIRDPARTYAPP_H__
 
+#ifndef THIRDPARTY_MSG_BUFFERSIZE
+#define THIRDPARTY_MSG_BUFFERSIZE 256
+#endif
+
 #include <cstdint>
 #include "app.h"
 #include "html/h/thirdparty_html.h"
@@ -83,6 +87,55 @@ class thirdpartyApp {
             // we don't care, but pretend everything is alright - developer default ;)
             return true;
         }
+        /**
+         * called from ahoi app
+         * frequency depends on MQTT_INTERVAL (default 60s)
+         */
+        void sendMqtt(mqtt *mqtt) {
+            while(!q.empty()) {
+                qentry entry = q.front();
+                if(entry.appendtopic) {
+                    mqtt->sendMsg((const char *)buffer+entry.topicindex,(const char *)buffer+entry.dataindex);
+                } else {
+                    mqtt->sendMsg2((const char *)buffer+entry.topicindex,(const char *)buffer+entry.dataindex,false);                   
+                }
+                q.pop();
+            }
+            bufferindex = 0;
+        }
+        /**
+         * enqueue a mqtt message in send queue
+         * @param topic - mqtt topic
+         * @param message - mqtt payload
+         * @param appendTopic - append topic to ahoi prefix (inverter/)
+         * @return true, if message was enqueued, false otherwise
+         */
+        bool enqueueMessage(char *topic, char *data, bool appendTopic = true) {
+            size_t topiclen = strlen(topic)+1;
+            size_t datalen = strlen(data)+1;
+            if(bufferindex+topiclen+datalen>THIRDPARTY_MSG_BUFFERSIZE) {
+                return false;
+            }
+            qentry entry;
+            entry.topicindex = bufferindex;
+            memcpy(buffer+bufferindex,topic,topiclen);
+            bufferindex += topiclen;
+            entry.dataindex = bufferindex;
+            memcpy(buffer+bufferindex,data,datalen);
+            bufferindex += datalen;
+            entry.appendtopic = appendTopic;
+            q.push(entry);
+            return true;
+        }
+        private:
+        char buffer[THIRDPARTY_MSG_BUFFERSIZE];
+        uint16_t bufferindex = 0;
+        typedef struct {
+            uint16_t topicindex;
+            uint16_t dataindex;
+            bool appendtopic;
+        } qentry;
+        std::queue<qentry> q;
 };
 
 #endif /*__THIRDPARTYAPP_H__*/

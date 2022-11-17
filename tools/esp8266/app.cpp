@@ -602,6 +602,12 @@ void app::sendMqtt(void) {
 
     mMqtt.sendMsg("uptime", val);
 
+#ifdef THIRDPARTY
+    if(tpApp) {
+        tpApp->sendMqtt(&mMqtt);
+    }
+#endif
+
     if(mMqttSendList.empty())
         return;
 

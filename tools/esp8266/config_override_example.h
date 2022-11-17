@@ -28,6 +28,9 @@
 // #define THIRDPARTY
 
 // app name which will be diplayed in webgui menu
-// define THIRDPARTY_MENUNAME "ThirdpartyApp"
+// #define THIRDPARTY_MENUNAME "ThirdpartyApp"
+
+// buffer size for mqtt msg buffer
+// #define THIRDPARTY_MSG_BUFFERSIZE 256
 
 #endif /*__CONFIG_OVERRIDE_H__*/
