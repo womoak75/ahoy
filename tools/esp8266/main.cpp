@@ -5,10 +5,14 @@
 
 #include "dbg.h"
 #include "app.h"
+#include "pluginmanager.h"
 #include "config.h"
 
 
 app myApp;
+#ifdef THIRDPARTY
+pluginManager pluginmanager;
+#endif
 
 //-----------------------------------------------------------------------------
 IRAM_ATTR void handleIntr(void) {
@@ -18,6 +22,9 @@ IRAM_ATTR void handleIntr(void) {
 
 //-----------------------------------------------------------------------------
 void setup() {
+#ifdef THIRDPARTY
+    myApp.setThirdpartyApp(&pluginmanager);
+#endif
     myApp.setup(WIFI_TRY_CONNECT_TIME);
 
     // TODO: move to HmRadio

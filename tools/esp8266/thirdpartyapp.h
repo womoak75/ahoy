@@ -91,7 +91,7 @@ class thirdpartyApp {
          * called from ahoi app
          * frequency depends on MQTT_INTERVAL (default 60s)
          */
-        void sendMqtt(mqtt *mqtt) {
+        virtual void sendMqtt(mqtt *mqtt) {
             while(!q.empty()) {
                 qentry entry = q.front();
                 if(entry.appendtopic) {
