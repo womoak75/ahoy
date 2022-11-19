@@ -7,8 +7,10 @@
 class pluginManager : public thirdpartyApp
 {
 public:
+    pluginManager() : thirdpartyApp(0) {}
      void setup(app *app) {
         for(int i = 0; i < plugincount; i++) {
+            plugins[i]->setSystem(this);
             plugins[i]->setup(app);
         }
     }
@@ -27,20 +29,15 @@ public:
             plugins[i]->mqttCallback(topic,payload,length);
         }
      }
-    void sendMqtt(mqtt *mqtt) {
-        for(int i = 0; i < plugincount; i++) {
-            plugins[i]->sendMqtt(mqtt);
-        }
-     }
      private:
      // instantiate plugins here
-    demoPlugin plugin1;
+    demoPlugin plugin1 = demoPlugin(1);
      // Plugin plugin2;
 
     // no idea how to do it the 'c++ way'
     // java would be more fun :)
     static const int plugincount = 1;
-    thirdpartyApp* plugins[plugincount] = {&plugin1};
+    Plugin* plugins[plugincount] = {&plugin1};
 
 
 };

@@ -3,9 +3,10 @@
 
 #include "thirdpartyapp.h"
 
-class demoPlugin : public thirdpartyApp
+class demoPlugin : public Plugin
 {
 public:
+    demoPlugin(int id) : Plugin(id) {}
     void setup(app *app) {
         // setup
     }

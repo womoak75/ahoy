@@ -14,15 +14,19 @@
 #include "app.h"
 #include "html/h/thirdparty_html.h"
 
-/**
- * thirdpartyApp
- *
- * Simple interface to add custom code / apps / plugins
- * which will be executed within ahoi app context.
- *
- */
-class thirdpartyApp {
+class System {
     public:
+    virtual bool enqueueMessage(char *topic, char *data, bool appendTopic = true) = 0;
+};
+class Plugin {
+    public:
+        Plugin(int _id) {
+            id = _id;
+        }
+        int getId() { return id; }
+        void setSystem(System *s) {
+            system = s;
+        }
         /**
          * setup
          * 
@@ -59,6 +63,35 @@ class thirdpartyApp {
          *  @param length - length of payload
          */
         virtual void mqttCallback(char *topic, byte *payload, unsigned int length) = 0;
+                /**
+         * enqueue a mqtt message in send queue
+         * @param topic - mqtt topic
+         * @param message - mqtt payload
+         * @param appendTopic - append topic to ahoi prefix (inverter/)
+         * @return true, if message was enqueued, false otherwise
+         */
+        bool enqueueMessage(char *topic, char *data, bool appendTopic = true) {
+            if(system) {
+            return system->enqueueMessage(topic, data, appendTopic);
+            } else {
+                return false;
+            }
+        }
+        private:
+        int id;
+        System *system;
+};
+
+/**
+ * thirdpartyApp
+ *
+ * Simple interface to add custom code / apps / plugins
+ * which will be executed within ahoi app context.
+ *
+ */
+class thirdpartyApp : public Plugin , public System {
+    public:
+        thirdpartyApp(int id) : Plugin(id) {}
         /**
          * call when menu entry in webpage menu is clicked
          * @param request - AsyncWebServerRequest
