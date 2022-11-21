@@ -1,10 +1,14 @@
-name: Ahoy Dev-Build for ESP8266/ESP32
+name: Ahoy Release for ESP8266
 
 on:
   push:
-    branches: development*
-    paths-ignore:
-    - '**.md' # Do no build on *.md changes
+    branches: main
+    paths:
+    - 'src/**' # build only when changes occur here
+    - '.github/workflows/compile_release.yml'
+    - '!README.md'
+    - '!CHANGES.md'
+    - '!User_Manual.md'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -12,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-        ref: development03
+        ref: main
     - uses: benjlevesque/short-sha@v2.1
       id: short-sha
       with:
@@ -54,23 +58,35 @@ jobs:
       working-directory: src
       run: python ../scripts/getVersion.py >> $GITHUB_OUTPUT
 
+    - name: Create Release
+      id: create-release
+      uses: actions/create-release@v1
+      with:
+        draft: false
+        prerelease: false
+        release_name: ${{ steps.rename-binary-files.outputs.name }}
+        tag_name: ${{ steps.rename-binary-files.outputs.name }}
+        body_path: src/CHANGES.md
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
     - name: Set Version
       uses: cschleiden/replace-tokens@v1
       with:
-        files: tools/esp8266/User_Manual.md
+        files: User_Manual.md
       env:
           VERSION: ${{ steps.rename-binary-files.outputs.name }}
 
-    - name: Create Manifest
-      working-directory: src
-      run: python ../scripts/buildManifest.py
-
     - name: Create Artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: ${{ steps.rename-binary-files.outputs.name }}_dev_build
-        path: |
-          src/firmware/*
-          src/User_Manual.md
-          src/install.html
+      run: zip  --junk-paths ${{ steps.rename-binary-files.outputs.name }}.zip src/firmware/* User_Manual.md
 
+    - name: Upload Release
+      id: upload-release
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create-release.outputs.upload_url }}
+        asset_path: ./${{ steps.rename-binary-files.outputs.name }}.zip
+        asset_name: ${{ steps.rename-binary-files.outputs.name }}.zip
+        asset_content_type: application/zip

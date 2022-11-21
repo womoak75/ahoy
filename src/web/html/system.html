@@ -1,0 +1,82 @@
+<!doctype html>
+<html>
+    <head>
+        <title>System</title>
+        <link rel="stylesheet" type="text/css" href="style.css"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script type="text/javascript" src="api.js"></script>
+    </head>
+    <body>
+        <div class="topnav">
+            <a href="/" class="title">AhoyDTU</a>
+            <a href="javascript:void(0);" class="icon" onclick="topnav()">
+                <span></span>
+                <span></span>
+                <span></span>
+            </a>
+            <div id="topnav" class="hide"></div>
+        </div>
+        <div id="wrapper">
+            <div id="content">
+                <div><ul id="info"></ul></div>
+                <div id="system"></div>
+            </div>
+        </div>
+        <div id="footer">
+            <div class="left">
+                <a href="https://ahoydtu.de" target="_blank">AhoyDTU &copy 2022</a>
+                <ul>
+                    <li><a href="https://discord.gg/WzhxEY62mB" target="_blank">Discord</a></li>
+                    <li><a href="https://github.com/lumapu/ahoy" target="_blank">Github</a></li>
+                </ul>
+            </div>
+            <div class="right">
+                <ul>
+                    <li><span id="version"></span></li>
+                    <li><span id="esp_type"></span></li>
+                    <li><a href="https://creativecommons.org/licenses/by-nc-sa/3.0/de" target="_blank" >CC BY-NC-SA 3.0</a></li>
+                </ul>
+            </div>
+        </div>
+        <script type="text/javascript">
+            function parseSys(obj) {
+                parseVersion(obj);
+                parseESP(obj);
+            }
+
+            function parseSysInfo(obj) {
+                const data = ["sdk", "cpu_freq", "chip_revision",
+                    "chip_model", "chip_cores", "esp_type", "mac", "wifi_rssi",
+                    "flash_size", "sketch_used", "heap_total", "heap_free", "heap_frag",
+                    "max_free_blk", "version", "core_version", "reboot_reason"];
+
+                var ul = document.getElementById("info");
+                for (const [key, value] of Object.entries(obj)) {
+                    if(!data.includes(key) || (typeof value == 'undefined')) continue;
+                    var li = document.createElement("li");
+                    li.appendChild(document.createTextNode(key + ": " + value));
+                    ul.appendChild(li);
+                }
+            }
+
+            function parse(obj) {
+                if(null != obj) {
+                    parseMenu(obj["menu"]);
+                    parseSys(obj["system"]);
+                    parseSysInfo(obj["system"]);
+                    var e = document.getElementById("system");
+                    e.innerHTML = obj["html"];
+
+                    if(null != obj["refresh"]) {
+                        var meta = document.createElement('meta');
+                        meta.httpEquiv = "refresh"
+                        meta.content = obj["refresh"] + "; URL=" + obj["refresh_url"];
+                        document.getElementsByTagName('head')[0].appendChild(meta);
+                    }
+                }
+            }
+
+            getAjax("/api/html" + window.location.pathname, parse);
+        </script>
+    </body>
+</html>
