@@ -19,6 +19,9 @@
 #include <ArduinoJson.h>
 #include "../defines.h"
 #include "../hm/hmSystem.h"
+#ifdef THIRDPARTY
+#include "../thirdpartyapp.h"
+#endif
 
 template<class HMSYSTEM>
 class PubMqtt {
@@ -175,6 +178,12 @@ class PubMqtt {
             }
         }
 
+#ifdef THIRDPARTY
+        void setTPCallback(std::function<void(char*, uint8_t*, unsigned int)> _tpCallback) {
+            tpCallback = _tpCallback;
+        }
+#endif
+
     private:
         void reconnect(void) {
             DPRINTLN(DBG_DEBUG, F("mqtt.h:reconnect"));
@@ -207,6 +216,11 @@ class PubMqtt {
                         snprintf(topic, MQTT_TOPIC_LEN + 13, "%s/devcontrol/#", mCfg_mqtt->topic);
                         DPRINTLN(DBG_INFO, F("subscribe to ") + String(topic));
                         mClient->subscribe(topic); // subscribe to mTopic + "/devcontrol/#"
+#ifdef THIRDPARTY
+                        snprintf(topic, MQTT_TOPIC_LEN + 13, "%s/thirdparty/#", mCfg_mqtt->topic);
+                        DPRINTLN(DBG_INFO, F("subscribe to ") + String(topic));
+                        mClient->subscribe(topic); // subscribe to mTopic + "/thirdparty/#"
+#endif
                     }
                 }
             }
@@ -438,6 +452,11 @@ class PubMqtt {
                 }
                 token = strtok(NULL, "/");
             }
+#ifdef THIRDPARTY
+            if(tpCallback) {
+                tpCallback(topic,payload,length);
+            }
+#endif
             DPRINTLN(DBG_INFO, F("app::cbMqtt finished"));
         }
 
@@ -453,6 +472,9 @@ class PubMqtt {
         uint32_t mLastReconnect;
         uint32_t mTxCnt;
         std::queue<uint8_t> mSendList;
+#ifdef THIRDPARTY
+        std::function<void(char*, uint8_t*, unsigned int)> tpCallback = nullptr;
+#endif
 };
 
 #endif /*__PUB_MQTT_H__*/

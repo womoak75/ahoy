@@ -29,7 +29,7 @@
 
 #ifdef THIRDPARTY
 #include "thirdpartyapp.h"
-#def
+#endif
 
 // convert degrees and radians for sun calculation
 #define SIN(x) (sin(radians(x)))

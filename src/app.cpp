@@ -44,6 +44,12 @@ void app::setup(uint32_t timeout) {
         addListener(EVERY_SEC, std::bind(&PubMqttType::tickerSecond, &mMqtt));
         addListener(EVERY_MIN, std::bind(&PubMqttType::tickerMinute, &mMqtt));
         addListener(EVERY_HR,  std::bind(&PubMqttType::tickerHour, &mMqtt));
+#ifdef THIRDPARTY
+        if(tpApp) {
+            mMqtt.setTPCallback(std::bind(&thirdpartyApp::mqttCallback,tpApp, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+            tpApp->setPublishFkt(std::bind(&PubMqttType::sendMsg, &mMqtt, std::placeholders::_1, std::placeholders::_2),std::bind(&PubMqttType::sendMsg2, &mMqtt, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        }
+#endif
     }
 #endif
     setupLed();
@@ -54,6 +60,18 @@ void app::setup(uint32_t timeout) {
     addListener(EVERY_SEC, std::bind(&web::tickSecond, mWeb));
 
     //addListener(EVERY_MIN, std::bind(&PubSerialType::tickerMinute, &mPubSerial));
+#ifdef THIRDPARTY
+    if(tpApp) {
+        tpApp->setup(this);
+        Inverter<> *iv;
+        for (uint8_t i = 0; i < MAX_NUM_INVERTERS; i++) {
+            iv = mSys->getInverterByPos(i, false);
+            if (NULL != iv) {
+                iv->setThirdpartyCallback(std::bind(&thirdpartyApp::inverterCallback,tpApp,std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+            }
+        }
+    }
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -180,6 +198,12 @@ void app::loop(void) {
             updateLed();
         }
     }
+#ifdef THIRDPARTY
+    if(tpApp) {
+        tpApp->loop(this);
+        tpApp->publish(this);
+    }
+#endif
 }
 
 //-----------------------------------------------------------------------------

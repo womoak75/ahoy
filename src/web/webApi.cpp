@@ -356,7 +356,6 @@ void webApi::getMenu(JsonObject obj) {
     obj["link"][6] = "/update";
     obj["name"][7] = "System";
     obj["link"][7] = "/system";
-<<<<<<< HEAD:tools/esp8266/webApi.cpp
 #ifdef THIRDPARTY
 #ifndef THIRDPARTY_MENUNAME
     obj["name"][8] = "Thirdparty";
@@ -365,13 +364,11 @@ void webApi::getMenu(JsonObject obj) {
 #endif
     obj["link"][8] = "/thirdparty";
 #endif
-=======
     if(strlen(mConfig->sys.adminPwd) > 0) {
-        obj["name"][8] = "-";
-        obj["name"][9] = "Logout";
-        obj["link"][9] = "/logout";
+        obj["name"][9] = "-";
+        obj["name"][10] = "Logout";
+        obj["link"][10] = "/logout";
     }
->>>>>>> upstream/main:src/web/webApi.cpp
 }
 
 
