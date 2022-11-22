@@ -7,20 +7,21 @@
 
 List of approaches
 
-- [ESP8266/ESP32, C++](tools/esp8266/) 👈 the most effort is spent here
+- [ESP8266/ESP32, C++](Getting_Started.md) 👈 the most effort is spent here
 - [Arduino Nano, C++](tools/nano/NRF24_SendRcv/)
 - [Raspberry Pi, Python](tools/rpi/)
 - [Others, C/C++](tools/nano/NRF24_SendRcv/)
 
 ## Quick Start with ESP8266
-- [Go here ✨](tools/esp8266/README.md#things-needed)
+- [Go here ✨](Getting_Started.md#things-needed)
+- [Our Website](https://ahoydtu.de)
 
 
 ## Success Stories
 - [Getting the data into influxDB and visualize them in a Grafana Dashboard](https://grafana.com/grafana/dashboards/16850-pv-power-ahoy/) (thx @Carl)
 
 ## Support, Feedback, Information and Discussion
-- [Discord Server (~ 300 Users)](https://discord.gg/WzhxEY62mB)
+- [Discord Server (~ 1200 Users)](https://discord.gg/WzhxEY62mB)
 - [The root of development](https://www.mikrocontroller.net/topic/525778)
 
 ### Development
