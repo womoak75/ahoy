@@ -7,10 +7,10 @@ class demoPlugin : public Plugin
 {
 public:
     demoPlugin(int id) : Plugin(id) {}
-    void setup(app *app) {
-        // setup
+    void setup() {
+        
     }
-    void loop(app *app) {
+    void loop() {
         // main loop
         char topic[] = "demoplugin/out";
         char payload[] = "ahoi world!";
@@ -19,12 +19,9 @@ public:
           last = millis();
           // send mqtt message to 'DEF_MQTT_TOPIC/demoplugin/out'
           // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
-          enqueueMessage(topic,payload);
+          getSystem()->enqueueMessage(topic,payload,true);
           // send mqtt message to 'demoplugin/out'
-          enqueueMessage(topic,payload,false);
-          // ATTENTION:
-          // mqtt messages will be processed every MQTT_INTERVAL seconds by ahoi app
-          // default is 60s - (see config.h)
+          getSystem()->enqueueMessage(topic,payload,false);
         }
      }
      void inverterCallback(uint8_t inverterId, uint8_t fieldId, float value) {

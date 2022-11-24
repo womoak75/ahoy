@@ -47,7 +47,7 @@ void app::setup(uint32_t timeout) {
 #ifdef THIRDPARTY
         if(tpApp) {
             mMqtt.setTPCallback(std::bind(&thirdpartyApp::mqttCallback,tpApp, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-            tpApp->setPublishFkt(std::bind(&PubMqttType::sendMsg, &mMqtt, std::placeholders::_1, std::placeholders::_2),std::bind(&PubMqttType::sendMsg2, &mMqtt, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+            tpApp->setPublishFkt(std::bind(&PubMqttType::sendMsg2, &mMqtt, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         }
 #endif
     }
@@ -62,7 +62,7 @@ void app::setup(uint32_t timeout) {
     //addListener(EVERY_MIN, std::bind(&PubSerialType::tickerMinute, &mPubSerial));
 #ifdef THIRDPARTY
     if(tpApp) {
-        tpApp->setup(this);
+        tpApp->setup(this,mConfig);
         Inverter<> *iv;
         for (uint8_t i = 0; i < MAX_NUM_INVERTERS; i++) {
             iv = mSys->getInverterByPos(i, false);
@@ -200,8 +200,8 @@ void app::loop(void) {
     }
 #ifdef THIRDPARTY
     if(tpApp) {
-        tpApp->loop(this);
-        tpApp->publish(this);
+        tpApp->loop();
+        tpApp->publish();
     }
 #endif
 }

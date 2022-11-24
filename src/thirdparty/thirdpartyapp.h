@@ -14,10 +14,23 @@
 #include "app.h"
 #include "web/html/h/thirdparty_html.h"
 
+typedef enum {SECOND,MINUTE} PLUGIN_TIMER_INTVAL;
+class Plugin;
+
+/**
+ * facade for main app (ahoi) 
+ */
 class System {
     public:
-    virtual bool enqueueMessage(char *topic, char *data, bool appendTopic = true) = 0;
+        virtual void setup(app *app, settings_t *settings);
+        virtual bool enqueueMessage(char *topic, char *data, bool appendTopic = true) = 0;
+        virtual void publishInternal(Plugin *plugin, byte *payload, unsigned int length) = 0;
+        virtual void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, std::function<void(void)> timerCb) = 0;
 };
+
+/**
+ * Plugin interface
+ */
 class Plugin {
     public:
         Plugin(int _id) {
@@ -32,9 +45,9 @@ class Plugin {
          * 
          * called at end of ahoi main setup
          * 
-         * @param app - pointer to ahoi app
+         * @param app - pointer to ahoi settings
         */
-        virtual void setup(app *app) = 0;
+        virtual void setup() = 0;
         /**
          * loop
          * 
@@ -42,7 +55,7 @@ class Plugin {
          * 
          * @param app - pointer to ahoi app
         */
-        virtual void loop(app *app) = 0;
+        virtual void loop() = 0;
         /**
          * inverterCallback
          * 
@@ -63,21 +76,11 @@ class Plugin {
          *  @param length - length of payload
          */
         virtual void mqttCallback(char *topic, byte *payload, unsigned int length) = 0;
-                /**
-         * enqueue a mqtt message in send queue
-         * @param topic - mqtt topic
-         * @param message - mqtt payload
-         * @param appendTopic - append topic to ahoi prefix (inverter/)
-         * @return true, if message was enqueued, false otherwise
-         */
-        bool enqueueMessage(char *topic, char *data, bool appendTopic = true) {
-            if(system) {
-            return system->enqueueMessage(topic, data, appendTopic);
-            } else {
-                return false;
-            }
-        }
-        private:
+
+    protected:
+        System* getSystem() { return system; }
+
+    private:
         int id;
         System *system;
 };
@@ -91,7 +94,16 @@ class Plugin {
  */
 class thirdpartyApp : public Plugin , public System {
     public:
-        thirdpartyApp(int id) : Plugin(id) {}
+        thirdpartyApp(int id) : Plugin(id) {
+            setSystem(this); // :)))
+        }
+        void setup() {
+
+        }
+        void setup(app *app, settings_t *settings) {
+            _app = app,
+            appsettings = settings;
+        }
         /**
          * call when menu entry in webpage menu is clicked
          * @param request - AsyncWebServerRequest
@@ -121,25 +133,26 @@ class thirdpartyApp : public Plugin , public System {
             return true;
         }
         /**
-         * called from ahoi app
-         * frequency depends on MQTT_INTERVAL (default 60s)
+         * called from ahoi main loop
          */
-        void publish(app *app) {
+        void publish() {
+            char topic[128];
             while(!q.empty()) {
                 qentry entry = q.front();
                 if(!entry.appendtopic) {
-                    if(publishFkt2) {
-                        publishFkt2((const char *)buffer+entry.topicindex,(const char *)buffer+entry.dataindex,false);
-                    }
+                    snprintf(topic,sizeof(topic),"%s",(const char *)buffer+entry.topicindex);
                 } else {
-                    if(publishFkt) {
-                         publishFkt((const char *)buffer+entry.topicindex,(const char *)buffer+entry.dataindex);
-                    }
+                    snprintf(topic,sizeof(topic),"%s/%s",appsettings->mqtt.topic,(const char *)buffer+entry.topicindex);
+                }
+                if(publishFkt2) {
+                    publishFkt2(topic,(const char *)buffer+entry.dataindex,false);
                 }
                 q.pop();
             }
+
             bufferindex = 0;
         }
+
         /**
          * enqueue a mqtt message in send queue
          * @param topic - mqtt topic
@@ -164,11 +177,18 @@ class thirdpartyApp : public Plugin , public System {
             q.push(entry);
             return true;
         }
-        void setPublishFkt(std::function<void(const char *topic, const char *msg)> _publishFkt,std::function<void(const char *topic, const char *msg, boolean retained)> _publishFkt2) {
-            publishFkt = _publishFkt;
+        void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, std::function<void(void)> timerCb) {
+            if(_app) {
+                reinterpret_cast<ah::Scheduler*>(_app)->addListener((intval==PLUGIN_TIMER_INTVAL::MINUTE)?EVERY_MIN:EVERY_SEC,timerCb);
+            }
+        }
+        void setPublishFkt(std::function<void(const char *topic, const char *msg, boolean retained)> _publishFkt2) {
             publishFkt2 = _publishFkt2;
         }
-        private:
+    protected:
+            app *_app = nullptr;
+            settings_t *appsettings = nullptr;
+    public:
         char buffer[THIRDPARTY_MSG_BUFFERSIZE];
         uint16_t bufferindex = 0;
         typedef struct {
@@ -177,7 +197,6 @@ class thirdpartyApp : public Plugin , public System {
             bool appendtopic;
         } qentry;
         std::queue<qentry> q;
-        std::function<void(const char *topic, const char *msg)> publishFkt = nullptr;
         std::function<void(const char *topic, const char *msg, boolean retained)> publishFkt2 = nullptr;
 };
 
