@@ -252,10 +252,11 @@ Extend your custom code class from 'thirdpartyApp'
 class MyCustomCode : public thirdpartyApp
 {
 public:
-    void setup(app *app) {
+    MyCustomCode(int id) : Plugin(id) {}
+    void setup() {
         // setup
     }
-    void loop(app *app) {
+    void loop() {
         // main loop
         char topic[] = "mycustomcode/out";
         char payload[] = "ahoi world!";
@@ -264,9 +265,9 @@ public:
           last = millis();
           // send mqtt message to 'DEF_MQTT_TOPIC/mycustomcode/out'
           // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
-          enqueueMessage(topic,payload);
+          getSystem()->enqueueMessage(topic,payload);
           // send mqtt message to 'mycustomcode/out'
-          enqueueMessage(topic,payload,false);
+          getSystem()->enqueueMessage(topic,payload,false);
           // ATTENTION:
           // mqtt messages will be processed every MQTT_INTERVAL seconds by ahoi app
           // default is 60s - (see config.h)
