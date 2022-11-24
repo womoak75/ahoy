@@ -265,12 +265,9 @@ public:
           last = millis();
           // send mqtt message to 'DEF_MQTT_TOPIC/mycustomcode/out'
           // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
-          getSystem()->enqueueMessage(topic,payload);
+          getSystem()->enqueueMessage(this,topic,payload);
           // send mqtt message to 'mycustomcode/out'
-          getSystem()->enqueueMessage(topic,payload,false);
-          // ATTENTION:
-          // mqtt messages will be processed every MQTT_INTERVAL seconds by ahoi app
-          // default is 60s - (see config.h)
+          getSystem()->enqueueMessage(this,topic,payload,false);
         }
      }
      void inverterCallback(uint8_t inverterId, uint8_t fieldId, float value) {
@@ -281,6 +278,7 @@ public:
          // ahoi topic: 'DEF_MQTT_TOPIC/devcontrol/#'
          // thirdparty topic: 'DEF_MQTT_TOPIC/thirdparty/#'
          // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
+         // internal topic: 'plugins/{pluginid}/{dataidentifier}'
      }
 };
 

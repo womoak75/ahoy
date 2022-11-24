@@ -23,8 +23,8 @@ class Plugin;
 class System {
     public:
         virtual void setup(app *app, settings_t *settings);
-        virtual bool enqueueMessage(char *topic, char *data, bool appendTopic = true) = 0;
-        virtual void publishInternal(Plugin *plugin, byte *payload, unsigned int length) = 0;
+        virtual bool enqueueMessage(Plugin *plugin, char *topic, char *data, bool appendTopic = true) = 0;
+        virtual void publishInternal(Plugin *plugin, char *dataid, byte *payload, unsigned int length) = 0;
         virtual void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, std::function<void(void)> timerCb) = 0;
 };
 
@@ -160,7 +160,7 @@ class thirdpartyApp : public Plugin , public System {
          * @param appendTopic - append topic to ahoi prefix (inverter/)
          * @return true, if message was enqueued, false otherwise
          */
-        bool enqueueMessage(char *topic, char *data, bool appendTopic = true) {
+        bool enqueueMessage(Plugin *plugin, char *topic, char *data, bool appendTopic = true) {
             size_t topiclen = strlen(topic)+1;
             size_t datalen = strlen(data)+1;
             if(bufferindex+topiclen+datalen>THIRDPARTY_MSG_BUFFERSIZE) {

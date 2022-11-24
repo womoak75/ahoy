@@ -19,9 +19,9 @@ public:
           last = millis();
           // send mqtt message to 'DEF_MQTT_TOPIC/demoplugin/out'
           // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
-          getSystem()->enqueueMessage(topic,payload,true);
+          getSystem()->enqueueMessage(this,topic,payload,true);
           // send mqtt message to 'demoplugin/out'
-          getSystem()->enqueueMessage(topic,payload,false);
+          getSystem()->enqueueMessage(this,topic,payload,false);
         }
      }
      void inverterCallback(uint8_t inverterId, uint8_t fieldId, float value) {
@@ -32,6 +32,7 @@ public:
          // ahoi topic: 'DEF_MQTT_TOPIC/devcontrol/#'
          // thirdparty topic: 'DEF_MQTT_TOPIC/thirdparty/#'
          // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
+         // internal topic: 'plugins/{pluginid}/{dataidentifier}'
      }
 };
 

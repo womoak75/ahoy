@@ -37,10 +37,11 @@ public:
             plugins[i]->mqttCallback(topic,payload,length);
         }
      }
-    void publishInternal(Plugin *plugin, byte *payload, unsigned int length) {
-        char topic[128];
+    void publishInternal(Plugin *plugin, char *dataid, byte *payload, unsigned int length) {
+        char topic[strlen(dataid)+12];
         // pretty 'hacky' :/
-        snprintf(topic,sizeof(topic),"%s/%s/%d",appsettings->mqtt.topic,"thirdparty",plugin->getId());
+        // topic structure 'plugins/{pluginid}/{dataidentifier}'
+        snprintf(topic,sizeof(topic),"plugins/%d/%s",plugin->getId(),dataid);
         for(int i = 0; i < plugincount; i++) {
             if(plugins[i]->getId() != plugin->getId()) {
                 plugins[i]->mqttCallback(topic,payload,length);
