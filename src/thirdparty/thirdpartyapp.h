@@ -10,6 +10,7 @@
 #define THIRDPARTY_MSG_BUFFERSIZE 256
 #endif
 
+
 #include <cstdint>
 #include "app.h"
 #include "web/html/h/thirdparty_html.h"
@@ -23,9 +24,12 @@ class Plugin;
 class System {
     public:
         virtual void setup(app *app, settings_t *settings);
-        virtual bool enqueueMessage(Plugin *plugin, char *topic, char *data, bool appendTopic = true) = 0;
-        virtual void publishInternal(Plugin *plugin, char *dataid, byte *payload, unsigned int length) = 0;
+        virtual bool enqueueMessage(Plugin *sender, char *topic, char *data, bool appendTopic = true) = 0;
+        virtual void publishInternal(Plugin *sender, char *dataid, byte *payload, unsigned int length) = 0;
         virtual void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, std::function<void(void)> timerCb) = 0;
+        virtual const Plugin* getPluginById(int pluginid);
+        virtual const Plugin* getPluginByName(const char* pluginname);
+        virtual int getPluginCount();
 };
 
 /**
@@ -33,8 +37,9 @@ class System {
  */
 class Plugin {
     public:
-        Plugin(int _id) {
+        Plugin(int _id, const char* _name) {
             id = _id;
+            name = _name;
         }
         int getId() { return id; }
         void setSystem(System *s) {
@@ -76,7 +81,17 @@ class Plugin {
          *  @param length - length of payload
          */
         virtual void mqttCallback(char *topic, byte *payload, unsigned int length) = 0;
-
+        /**
+         * internalCallback
+         * 
+         * will be called from 'system'
+         * 
+         *  @param topic - topic for which data was receiced (e.g. 'powercontroller/power/limit')
+         *  @param payload - byte* for received data 
+         *  @param length - length of payload
+         */
+        virtual void internalCallback(char *topic, byte *payload, unsigned int length) = 0;
+        const char *name;
     protected:
         System* getSystem() { return system; }
 
@@ -94,7 +109,7 @@ class Plugin {
  */
 class thirdpartyApp : public Plugin , public System {
     public:
-        thirdpartyApp(int id) : Plugin(id) {
+        thirdpartyApp(int id,const char* name) : Plugin(id,name) {
             setSystem(this); // :)))
         }
         void setup() {
@@ -132,17 +147,29 @@ class thirdpartyApp : public Plugin , public System {
             // we don't care, but pretend everything is alright - developer default ;)
             return true;
         }
+        virtual const Plugin* getPluginById(int pluginid) {
+            return this; // :)
+        }
+        virtual const Plugin* getPluginByName(const char* pluginname) {
+            return this; // :)
+        }
+
+        virtual int getPluginCount() {
+            return 1;
+        }
         /**
          * called from ahoi main loop
          */
         void publish() {
+            // we dont care about real topic length, one size fit's all ;)
             char topic[128];
             while(!q.empty()) {
                 qentry entry = q.front();
+                auto sender = getSystem()->getPluginById(entry.pluginid);
                 if(!entry.appendtopic) {
-                    snprintf(topic,sizeof(topic),"%s",(const char *)buffer+entry.topicindex);
+                    snprintf(topic,sizeof(topic),"%s/%s",sender->name,(const char *)buffer+entry.topicindex);
                 } else {
-                    snprintf(topic,sizeof(topic),"%s/%s",appsettings->mqtt.topic,(const char *)buffer+entry.topicindex);
+                    snprintf(topic,sizeof(topic),"%s/%s/%s",appsettings->mqtt.topic,sender->name,(const char *)buffer+entry.topicindex);
                 }
                 if(publishFkt2) {
                     publishFkt2(topic,(const char *)buffer+entry.dataindex,false);
@@ -174,6 +201,7 @@ class thirdpartyApp : public Plugin , public System {
             memcpy(buffer+bufferindex,data,datalen);
             bufferindex += datalen;
             entry.appendtopic = appendTopic;
+            entry.pluginid = plugin->getId();
             q.push(entry);
             return true;
         }
@@ -192,6 +220,7 @@ class thirdpartyApp : public Plugin , public System {
         char buffer[THIRDPARTY_MSG_BUFFERSIZE];
         uint16_t bufferindex = 0;
         typedef struct {
+            int pluginid;
             uint16_t topicindex;
             uint16_t dataindex;
             bool appendtopic;

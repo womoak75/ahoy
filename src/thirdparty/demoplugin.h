@@ -6,7 +6,8 @@
 class demoPlugin : public Plugin
 {
 public:
-    demoPlugin(int id) : Plugin(id) {}
+    demoPlugin() : Plugin(999,"demo") {}
+    demoPlugin(int id, const char* name) : Plugin(id,name) {}
     void setup() {
         
     }
@@ -32,7 +33,11 @@ public:
          // ahoi topic: 'DEF_MQTT_TOPIC/devcontrol/#'
          // thirdparty topic: 'DEF_MQTT_TOPIC/thirdparty/#'
          // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
-         // internal topic: 'plugins/{pluginid}/{dataidentifier}'
+      }
+
+     void internalCallback(char *topic, byte *payload, unsigned int length) {
+         // internal topic: '{pluginname}/{dataidentifier}'
+         
      }
 };
 

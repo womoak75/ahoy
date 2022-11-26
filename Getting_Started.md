@@ -252,21 +252,22 @@ Extend your custom code class from 'thirdpartyApp'
 class MyCustomCode : public thirdpartyApp
 {
 public:
-    MyCustomCode(int id) : Plugin(id) {}
+    MyCustomCode() : Plugin(23,"mycustomcode") {}
+    MyCustomCode(int id const char* name) : Plugin(id, name) {}
     void setup() {
         // setup
     }
     void loop() {
         // main loop
-        char topic[] = "mycustomcode/out";
-        char payload[] = "ahoi world!";
+        char topic[] = "out/greetings";
+        char payload[] = "ahoy world!";
         static unsigned long last = 0;
         if((millis()-last)>=55000) {
           last = millis();
-          // send mqtt message to 'DEF_MQTT_TOPIC/mycustomcode/out'
+          // send mqtt message to 'DEF_MQTT_TOPIC/mycustomcode/out/greetings'
           // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
           getSystem()->enqueueMessage(this,topic,payload);
-          // send mqtt message to 'mycustomcode/out'
+          // send mqtt message to 'mycustomcode/out/greetings'
           getSystem()->enqueueMessage(this,topic,payload,false);
         }
      }
@@ -278,7 +279,10 @@ public:
          // ahoi topic: 'DEF_MQTT_TOPIC/devcontrol/#'
          // thirdparty topic: 'DEF_MQTT_TOPIC/thirdparty/#'
          // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
-         // internal topic: 'plugins/{pluginid}/{dataidentifier}'
+     }
+
+     void internalCallback(char *topic, byte *payload, unsigned int length) {
+         // internal topic: '{pluginname}/{dataidentifier}'
      }
 };
 
