@@ -341,34 +341,47 @@ void webApi::getStaticIp(JsonObject obj) {
 
 //-----------------------------------------------------------------------------
 void webApi::getMenu(JsonObject obj) {
-    obj["name"][0] = "Live";
-    obj["link"][0] = "/live";
-    obj["name"][1] = "Serial Console";
-    obj["link"][1] = "/serial";
-    obj["name"][2] = "Settings";
-    obj["link"][2] = "/setup";
-    obj["name"][3] = "-";
-    obj["name"][4] = "REST API";
-    obj["link"][4] = "/api";
-    obj["trgt"][4] = "_blank";
-    obj["name"][5] = "-";
-    obj["name"][6] = "Update";
-    obj["link"][6] = "/update";
-    obj["name"][7] = "System";
-    obj["link"][7] = "/system";
+    uint8_t index = 0;
+    obj["name"][index] = "Live";
+    obj["link"][index] = "/live";
+    index++;
+    obj["name"][index] = "Serial Console";
+    obj["link"][index] = "/serial";
+    index++;
+    obj["name"][index] = "Settings";
+    obj["link"][index] = "/setup";
+    index++;
+    obj["name"][index] = "-";
+    index++;
+    obj["name"][index] = "REST API";
+    obj["link"][index] = "/api";
+    obj["trgt"][index] = "_blank";
+    index++;
+    obj["name"][index] = "-";
+    index++;
+    obj["name"][index] = "Update";
+    obj["link"][index] = "/update";
+    index++;
+    obj["name"][index] = "System";
+    obj["link"][index] = "/system";
 #ifdef THIRDPARTY
 #ifndef THIRDPARTY_MENUNAME
-    obj["name"][8] = "Thirdparty";
+    index++;
+    obj["name"][index] = "Thirdparty";
 #else
-    obj["name"][8] = THIRDPARTY_MENUNAME;
+    obj["name"][index] = THIRDPARTY_MENUNAME;
 #endif
-    obj["link"][8] = "/thirdparty";
+    obj["link"][index] = "/thirdparty";
 #endif
+    index++;
     if(strlen(mConfig->sys.adminPwd) > 0) {
-        obj["name"][9] = "-";
-        obj["name"][10] = "Logout";
-        obj["link"][10] = "/logout";
+        obj["name"][index] = "-";
+        index++;
+        obj["name"][index] = "Logout";
+        obj["link"][index] = "/logout";
     }
+
+
 }
 
 
