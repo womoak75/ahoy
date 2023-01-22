@@ -15,6 +15,7 @@
                 <span></span>
             </a>
             <div id="topnav" class="hide"></div>
+            <div id="wifiicon" class="info"></div>
         </div>
         <div id="wrapper">
             <div id="content">
@@ -31,31 +32,26 @@
 
                     }
                 </script>
-                <p><span class="des">Uptime: </span><span id="uptime"></span></p>
-                <p><span class="des">ESP-Time: </span><span id="date"></span></p>
-                <div id="sun">
-                    <span class="des">Sunrise: </span><span id="sunrise"></span><br>
-                    <span class="des">Sunset: </span><span id="sunset"></span>
-                </div>
-                <p><span class="des">WiFi RSSI: </span><span id="wifi_rssi"></span> dBm</p>
                 <p>
-                    <span class="des">Statistics: </span>
-                    <pre id="stat"></pre>
-                    <pre id="iv"></pre>
-                    <pre id="warn_info"></pre>
+                    <span class="des">Uptime: </span><span id="uptime"></span><br/>
+                    <span class="des">ESP-Time: </span><span id="date"></span>
                 </p>
-                <p>Every <span id="refresh"></span> seconds the values are updated</p>
+                <p>
+                    <span class="des">System Infos:</span>
+                    <div id="iv"></div>
+                    <div class="hr"></div>
+                    <div id="warn_info"></div>
+                </p>
 
+                <div class="hr"></div>
                 <div id="note">
-                    Discuss with us on <a href="https://discord.gg/WzhxEY62mB">Discord</a><br/>
-                    <h3>Documentation</h3>
-                    <a href="https://ahoydtu.de" target="_blank">ahoydtu.de</a>
-
                     <h3>Support this project:</h3>
                     <ul>
+                        <li><a href="https://github.com/lumapu/ahoy/blob/main/src/CHANGES.md" target="_blank">Changelog</a></li>
+                        <li>Discuss with us on <a href="https://discord.gg/WzhxEY62mB">Discord</a></li>
                         <li>Report <a href="https://github.com/lumapu/ahoy/issues" target="_blank">issues</a></li>
                         <li>Contribute to <a href="https://github.com/lumapu/ahoy/blob/main/User_Manual.md"  target="_blank">documentation</a></li>
-                        <li>Test <a href="https://github.com/lumapu/ahoy/actions/workflows/compile_development.yml"  target="_blank">development firmware</a></li>
+                        <li><a href="https://nightly.link/lumapu/ahoy/workflows/compile_development/development03/ahoydtu_dev.zip" target="_blank">Download</a> & Test development firmware, <a href="https://github.com/lumapu/ahoy/blob/development03/src/CHANGES.md" target="_blank">Changelog</a></li>
                         <li>make a <a href="https://paypal.me/lupusch"  target="_blank">donation</a></li>
                     </ul>
                     <p class="lic">
@@ -82,6 +78,10 @@
         </div>
         <script type="text/javascript">
             var exeOnce = true;
+            var tickCnt = 0;
+            var ts = 0;
+            var commInfo = "";
+            var release = null;
 
             function apiCb(obj) {
                 var e = document.getElementById("apiResult");
@@ -97,31 +97,39 @@
                 var date = new Date();
                 var obj = new Object();
                 obj.cmd = "set_time";
-                obj.ts = parseInt(date.getTime() / 1000);
+                obj.val = parseInt(date.getTime() / 1000);
                 getAjax("/api/setup", apiCb, "POST", JSON.stringify(obj));
             }
 
-            function parseSys(obj) {
+            function ts2Span(ts) {
+                return span(new Date(ts * 1000).toLocaleString('de-DE'));
+            }
+
+            function parseGeneric(obj) {
                 // Disclaimer
                 //if(obj["disclaimer"] == false) sessionStorage.setItem("gDisclaimer", promptFunction());
                 if(exeOnce){
                     parseVersion(obj);
                     parseESP(obj);
                 }
-                document.getElementById("wifi_rssi").innerHTML = obj["wifi_rssi"];
+                parseRssi(obj);
+            }
 
+            function parseSys(obj) {
+                ts = obj["ts_now"];
                 var date = new Date(obj["ts_now"] * 1000);
-                var up = obj["ts_uptime"];
+                var up = obj["generic"]["ts_uptime"];
                 var days = parseInt(up / 86400) % 365;
                 var hrs  = parseInt(up / 3600) % 24;
                 var min  = parseInt(up / 60) % 60;
                 var sec  = up % 60;
-                var sunrise = new Date(obj["ts_sunrise"] * 1000);
-                var sunset = new Date(obj["ts_sunset"] * 1000);
-                document.getElementById("uptime").innerHTML = days + " Days, "
-                    + ("0"+hrs).substr(-2) + ":"
-                    + ("0"+min).substr(-2) + ":"
-                    + ("0"+sec).substr(-2);
+                var e = document.getElementById("uptime");
+                e.innerHTML = days + " Day";
+                if(1 != days)
+                    e.innerHTML += "s";
+                e.innerHTML += ", " + ("0"+hrs).substr(-2) + ":"
+                   + ("0"+min).substr(-2) + ":"
+                   + ("0"+sec).substr(-2);
                 var dSpan = document.getElementById("date");
                 if(0 != obj["ts_now"])
                     dSpan.innerHTML = date.toLocaleString('de-DE');
@@ -134,76 +142,118 @@
                     e.addEventListener("click", setTime);
                 }
 
-                if(!obj["ts_sun_upd"]) {
-                    var e = document.getElementById("sun");
-                    if(null != e)
-                        e.parentNode.removeChild(e);
+                if(obj["ts_sunrise"] > 0) {
+                    if(((obj["ts_sunrise"] - obj["ts_offset"]) < obj["ts_now"])
+                        && ((obj["ts_sunset"] + obj["ts_offset"]) > obj["ts_now"])) {
+                        commInfo = "Polling inverter(s), will stop at " + (new Date((obj["ts_sunset"] + obj["ts_offset"]) * 1000).toLocaleString('de-DE'));
+                    }
+                    else if(obj["disNightComm"]) {
+                        commInfo = "Night time, no Communication to Inverter, ";
+                        if(obj["ts_now"] > (obj["ts_sunrise"] - obj["ts_offset"])) {
+                            commInfo += "stopped polling at " + (new Date((obj["ts_sunset"] + obj["ts_offset"]) * 1000).toLocaleString('de-DE'));
+                        }
+                        else {
+                            commInfo += "will start polling at " + (new Date((obj["ts_sunrise"] - obj["ts_offset"]) * 1000).toLocaleString('de-DE'));
+                        }
+                    }
                 }
-                else {
-                    document.getElementById("sunrise").innerHTML = sunrise.toLocaleString('de-DE');
-                    document.getElementById("sunset").innerHTML = sunset.toLocaleString('de-DE');
-                }
-            }
-
-            function parseStat(obj) {
-                document.getElementById("stat").innerHTML = "RX success: " + obj["rx_success"]
-                    + "\nRX fail: " + obj["rx_fail"]
-                    + "\nRX no answer: " + obj["rx_fail_answer"]
-                    + "\nFrames received: " + obj["frame_cnt"]
-                    + "\nTX cnt: " + obj["tx_cnt"];
             }
 
             function parseIv(obj) {
-                var html = "";
+                var p = div(["none"]);
                 for(var i of obj) {
-                    html += "Inverter #" + i["id"] + ": " + i["name"] + " (v" + i["version"] + ") is ";
-                    if(false == i["is_avail"])
-                        html += "not yet available\n";
-                    else {
-                        html += "available and is ";
-                        if(false == i["is_producing"])
-                            html += "not ";
-                        html += "producing\n";
+                    var icon = iconWarn;
+                    var color = "#F70";
+                    avail = "";
+                    if(false == i["enabled"]) {
+                        avail = "disabled";
                     }
+                    else if(false == i["is_avail"]) {
+                        icon = iconInfo;
+                        color = "#00d";
+                        avail = "not yet available";
+                    }
+                    else {
+                        icon = iconSuccess;
+                        avail = "available and is ";
+                        if(false == i["is_producing"])
+                            avail += "not ";
+                        else
+                            color = "#090";
+                        avail += "producing";
+                    }
+
+                    p.append(
+                        svg(icon, 20, 20, color, "icon"),
+                        span("Inverter #" + i["id"] + ": " + i["name"] + " (v" + i["version"] + ") is " + avail),
+                        br()
+                    );
 
                     if(false == i["is_avail"]) {
                         if(i["ts_last_success"] > 0) {
                             var date = new Date(i["ts_last_success"] * 1000);
-                            html += "-> last successful transmission: " + date.toLocaleString('de-DE') + "\n";
+                            p.append(span("-> last successful transmission: " + date.toLocaleString('de-DE')), br());
                         }
                     }
-
                 }
-                document.getElementById("iv").innerHTML = html;
+                document.getElementById("iv").replaceChildren(p);
             }
 
-            function parseWarnInfo(warn, info) {
-                var html = "";
+            function parseWarnInfo(warn, success, version) {
+                var p = div(["none"]);
                 for(var w of warn) {
-                    html += "WARN: " + w + "\n";
+                    p.append(svg(iconWarn, 20, 20, "#F70", "icon"), span(w), br());
                 }
-                for(var i of info) {
-                    html += "INFO: " + i + "\n";
+                for(var i of success) {
+                    p.append(svg(iconSuccess, 20, 20, "#090", "icon"), span(i), br());
                 }
-                document.getElementById("warn_info").innerHTML = html;
+
+                if(commInfo.length > 0)
+                    p.append(svg(iconInfo, 20, 20, "#00d", "icon"), span(commInfo), br());
+
+                if(null != release) {
+                    if(getVerInt(version) < getVerInt(release))
+                        p.append(svg(iconInfo, 20, 20, "#00d", "icon"), span("Update available, current released version: " + release), br());
+                    else if(getVerInt(version) > getVerInt(release))
+                        p.append(svg(iconInfo, 20, 20, "#00d", "icon"), span("You are using a development version, current released version: " + release), br());
+                }
+
+                document.getElementById("warn_info").replaceChildren(p);
+            }
+
+            function tick() {
+                if(0 != ts)
+                    document.getElementById("date").innerHTML = (new Date((++ts) * 1000)).toLocaleString('de-DE');
+                if(++tickCnt >= 10) {
+                    tickCnt = 0;
+                    getAjax('/api/index', parse);
+                }
             }
 
             function parse(obj) {
                 if(null != obj) {
                     if(exeOnce)
                         parseMenu(obj["menu"]);
-                    parseSys(obj["system"]);
-                    parseStat(obj["statistics"]);
+                    parseGeneric(obj["generic"]);
+                    parseSys(obj);
                     parseIv(obj["inverter"]);
-                    parseWarnInfo(obj["warnings"], obj["infos"]);
-                    document.getElementById("refresh").innerHTML = obj["refresh_interval"];
+                    parseWarnInfo(obj["warnings"], obj["infos"], obj["generic"]["version"]);
                     if(exeOnce) {
-                        window.setInterval("getAjax('/api/index', parse)", obj["refresh_interval"] * 1000);
+                        window.setInterval("tick()", 1000);
                         exeOnce = false;
+                        getAjax("https://api.github.com/repos/lumapu/ahoy/releases/latest", parseRelease);
                     }
                 }
-                else
-                    document.getElementById("refresh").innerHTML = "n/a";
+            }
+
+
+            function getVerInt(ver) {
+                var a = ver.split('.');
+                return (a[0] << 24) | (a[1] << 16) | a[2];
+            }
+
+            function parseRelease(obj) {
+                release = obj["name"].substring(6);
             }
 
             getAjax("/api/index", parse);

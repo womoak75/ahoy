@@ -144,6 +144,9 @@ class ResponseDecoder(ResponseDecoderFactory):
     def __init__(self, response, **params):
         """Initialize ResponseDecoder"""
         ResponseDecoderFactory.__init__(self, response, **params)
+        self.inv_name=params.get('inverter_name', None)
+        self.dtu_ser=params.get('dtu_ser', None)
+        self.strings=params.get('strings', None)
 
     def decode(self):
         """
@@ -155,6 +158,9 @@ class ResponseDecoder(ResponseDecoderFactory):
         model = self.inverter_model
         command = self.request_command
 
+        c_datetime = self.time_rx.strftime("%Y-%m-%d %H:%M:%S.%f")
+        logging.debug(f'{c_datetime} model_decoder: {model}Decode{command.upper()}')
+
         model_decoders = __import__('hoymiles.decoders')
         if hasattr(model_decoders, f'{model}Decode{command.upper()}'):
             device = getattr(model_decoders, f'{model}Decode{command.upper()}')
@@ -164,7 +170,10 @@ class ResponseDecoder(ResponseDecoderFactory):
 
         return device(self.response,
                 time_rx=self.time_rx,
-                inverter_ser=self.inverter_ser
+                inverter_ser=self.inverter_ser,
+                inverter_name=self.inv_name,
+                dtu_ser=self.dtu_ser,
+                strings=self.strings
                 )
 
 class InverterPacketFragment:

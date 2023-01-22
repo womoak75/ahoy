@@ -252,10 +252,10 @@ Extend your custom code class from 'thirdpartyApp'
 class MyCustomCode : public thirdpartyApp
 {
 public:
-    void setup(app *app) {
+    void setup(IApp *app) {
         // setup
     }
-    void loop(app *app) {
+    void loop(IApp *app) {
         // main loop
         char topic[] = "mycustomcode/out";
         char payload[] = "ahoi world!";
@@ -275,11 +275,8 @@ public:
      void inverterCallback(uint8_t inverterId, uint8_t fieldId, float value) {
         // receice inverter data
      }
-     void mqttCallback(char *topic, byte *payload, unsigned int length) {
-         // receive data for
-         // ahoi topic: 'DEF_MQTT_TOPIC/devcontrol/#'
-         // thirdparty topic: 'DEF_MQTT_TOPIC/thirdparty/#'
-         // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
+     void onCtrlRequest(JsonObject jsondata) {
+        // we don't care - developer default ;)
      }
 };
 
@@ -329,6 +326,7 @@ void setup() {
 | `RF24`                | 1.4.5   | GPL-2.0  |
 | `PubSubClient`        | 2.8     | MIT      |
 | `ArduinoJson`         | 6.19.4  | MIT      |
+| `ESP Async WebServer` | 4.3.0   | ?        |
 
 ## Contact
 

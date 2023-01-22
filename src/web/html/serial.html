@@ -15,6 +15,7 @@
                 <span></span>
             </a>
             <div id="topnav" class="hide"></div>
+            <div id="wifiicon" class="info"></div>
         </div>
         <div id="wrapper">
             <div id="content">
@@ -24,39 +25,29 @@
                     Uptime: <span id="uptime"></span>
                     <input type="button" value="clear" class="btn" id="clear"/>
                     <input type="button" value="autoscroll" class="btn" id="scroll"/>
-                    <br/>
-                    <br/>
-                    <br/>
-                    <br/>
-                    <hr>
+                    <div class="hr mt-3 mb-3"></div>
                     <h3>Commands</h3>
-                    <br/>
                     <label for="iv">Select Inverter:</label>
                     <select name="iv" id="InvID">
                     </select>
+                    <label for="pwrlimval">Power Limit Value</label>
+                    <input type="number" class="text" name="pwrlimval" maxlength="4"/>
+                    <label for="pwrlimctrl">Power Limit Command</label>
+                    <select name="pwrlimctrl">
+                        <option value="" selected disabled hidden>select the unit and persistence</option>
+                        <option value="limit_nonpersistent_absolute">absolute non persistent [W]</option>
+                        <option value="limit_nonpersistent_relative">relative non persistent [%]</option>
+                        <option value="limit_persistent_absolute">absolute persistent [W]</option>
+                        <option value="limit_persistent_relative">relative persistent [%]</option>
+                    </select>
                     <br/>
-                    <div id="power">
+                    <input type="button" value="Send Power Limit" class="btn" id="sendpwrlim"/>
+                    <div class="hr mt-3 mb-3"></div>
+                    <div id="power" class="mt-3">
                         <input type="button" value="Restart" class="btn" id="restart"/>
                         <input type="button" value="Turn Off" class="btn" id="power_off"/>
                         <input type="button" value="Turn On" class="btn" id="power_on"/>
                     </div>
-                    <br/>
-                    <br/>
-                    <br/>
-                    <br/>
-                    <br/>
-                    <label>Send Power Limit: </label>
-                    <input type="number" class="text" name="pwrlimval" maxlength="4"/>
-                    <label> </label>
-                    <select name="pwrlimcntrl" id="pwrlimcntrl">
-                        <option value="" selected disabled hidden>select the unit and persistence</option>
-                        <option value="0">absolute in Watt non persistent</option>
-                        <option value="1">relative in percent non persistent</option>
-                        <option value="256">absolute in Watt persistent</option>
-                        <option value="257">relative in percent persistent</option>
-                    </select>
-                    <br/>
-                    <input type="button" value="Send Power Limit" class="btn" id="sendpwrlim"/>
                     <br/>
                     <p>Ctrl result: <span id="result">n/a</span></p>
                 </div>
@@ -83,7 +74,7 @@
             var con = document.getElementById("serial");
             var exeOnce = true;
 
-            function parseSys(obj) {
+            function parseGeneric(obj) {
                 var up = obj["ts_uptime"];
                 var days = parseInt(up / 86400) % 365;
                 var hrs  = parseInt(up / 3600) % 24;
@@ -94,10 +85,11 @@
                     + ("0"+min).substr(-2) + ":"
                     + ("0"+sec).substr(-2);
 
+                parseRssi(obj);
                 if(true == exeOnce) {
                     parseVersion(obj);
                     parseESP(obj);
-                    window.setInterval("getAjax('/api/system', parseSys)", 10000);
+                    window.setInterval("getAjax('/api/generic', parseGeneric)", 10000);
                     exeOnce = false;
                     getAjax("/api/setup", parse);
                 }
@@ -120,7 +112,7 @@
                 // set time offset for serial console
                 var obj = new Object();
                 obj.cmd = "serial_utc_offset";
-                obj.ts  = new Date().getTimezoneOffset() * -60;
+                obj.val = new Date().getTimezoneOffset() * -60;
                 getAjax("/api/setup", null, "POST", JSON.stringify(obj));
             }
 
@@ -152,7 +144,6 @@
             }
 
 
-            // only for test
             function ctrlCb(obj) {
                 var e = document.getElementById("result");
                 if(obj["success"])
@@ -169,48 +160,40 @@
             const wrapper = document.getElementById('power');
 
             wrapper.addEventListener('click', (event) => {
-                var power = event.target.value;
                 var obj = new Object();
+                obj.id = get_selected_iv();
+                obj.cmd = "power";
 
-                switch (power)
-                {
+                switch (event.target.value) {
+                    default:
                     case "Turn On":
-                        obj.cmd = 0;
+                        obj.val = 1;
                         break;
                     case "Turn Off":
-                        obj.cmd = 1;
+                        obj.val = 0;
                         break;
-                    default:
-                        obj.cmd = 2;
                 }
 
-                obj.inverter = get_selected_iv();
-                obj.tx_request = 81;
                 getAjax("/api/ctrl", ctrlCb, "POST", JSON.stringify(obj));
             });
 
             document.getElementById("sendpwrlim").addEventListener("click", function() {
                 var val = parseInt(document.getElementsByName('pwrlimval')[0].value);
-                var ctrl = parseInt(document.getElementsByName('pwrlimcntrl')[0].value);
+                var cmd = document.getElementsByName('pwrlimctrl')[0].value;
 
-                if((ctrl == 1 || ctrl == 257) && val < 2) val = 2;
-
-                if(isNaN(val) || isNaN(ctrl))
-                {
-                    var tmp = (isNaN(val)) ? "Value" : "Unit";
-                    document.getElementById("result").textContent = tmp + " is missing";
+                if(isNaN(val)) {
+                    document.getElementById("result").textContent = "value is missing";
                     return;
                 }
 
                 var obj = new Object();
-                obj.inverter = get_selected_iv();
-                obj.cmd = 11;
-                obj.tx_request = 81;
-                obj.payload = [val, ctrl];
+                obj.id = get_selected_iv();
+                obj.cmd = cmd;
+                obj.val = val;
                 getAjax("/api/ctrl", ctrlCb, "POST", JSON.stringify(obj));
             });
 
-            getAjax("/api/system", parseSys);
+            getAjax("/api/generic", parseGeneric);
         </script>
     </body>
 </html>

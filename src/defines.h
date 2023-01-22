@@ -13,7 +13,7 @@
 //-------------------------------------
 #define VERSION_MAJOR       0
 #define VERSION_MINOR       5
-#define VERSION_PATCH       41
+#define VERSION_PATCH       66
 
 //-------------------------------------
 typedef struct {
@@ -77,6 +77,8 @@ union serial_u {
 #define MQTT_STATUS_AVAIL_NOT_PROD          1
 #define MQTT_STATUS_AVAIL_PROD              2
 
+enum {MQTT_STATUS_OFFLINE = 0, MQTT_STATUS_PARTIAL, MQTT_STATUS_ONLINE};
+
 //-------------------------------------
 // EEPROM
 //-------------------------------------
@@ -85,10 +87,10 @@ union serial_u {
 #define DEVNAME_LEN             16
 #define NTP_ADDR_LEN            32 // DNS Name
 
-#define MQTT_ADDR_LEN           32 // DNS Name
-#define MQTT_USER_LEN           16
-#define MQTT_PWD_LEN            32
-#define MQTT_TOPIC_LEN          64
+#define MQTT_ADDR_LEN           64 // DNS Name
+#define MQTT_USER_LEN           65 // there is another byte necessary for \0
+#define MQTT_PWD_LEN            65
+#define MQTT_TOPIC_LEN          65
 
 #define MQTT_MAX_PACKET_SIZE    384
 

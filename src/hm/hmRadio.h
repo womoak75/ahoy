@@ -99,7 +99,7 @@ class HmRadio {
             DPRINTLN(DBG_VERBOSE, F("hmRadio.h:setup"));
             pinMode(irq, INPUT_PULLUP);
             mBufCtrl = ctrl;
-        
+
 
             uint32_t dtuSn = 0x87654321;
             uint32_t chipID = 0; // will be filled with last 3 bytes of MAC
@@ -139,19 +139,20 @@ class HmRadio {
             mNrf24.setPALevel(ampPwr & 0x03);
             mNrf24.startListening();
 
-            DPRINTLN(DBG_INFO, F("Radio Config:"));
-            mNrf24.printPrettyDetails();
 
             mTxCh = setDefaultChannels();
 
-            if(!mNrf24.isChipConnected()) {
-                DPRINTLN(DBG_WARN, F("WARNING! your NRF24 module can't be reached, check the wiring"));
+            if(mNrf24.isChipConnected()) {
+                DPRINTLN(DBG_INFO, F("Radio Config:"));
+                mNrf24.printPrettyDetails();
             }
+            else
+                DPRINTLN(DBG_WARN, F("WARNING! your NRF24 module can't be reached, check the wiring"));
         }
 
         void loop(void) {
-            DISABLE_IRQ;
             if(mIrqRcvd) {
+                DISABLE_IRQ;
                 mIrqRcvd = false;
                 bool tx_ok, tx_fail, rx_ready;
                 mNrf24.whatHappened(tx_ok, tx_fail, rx_ready); // resets the IRQ pin to HIGH
@@ -174,9 +175,8 @@ class HmRadio {
                         break;
                 }
                 mNrf24.flush_rx(); // drop the packet
-            }
-            else
                 RESTORE_IRQ;
+            }
         }
 
         void enableDebug() {
@@ -184,14 +184,13 @@ class HmRadio {
         }
 
         void handleIntr(void) {
-            //DPRINTLN(DBG_VERBOSE, F("hmRadio.h:handleIntr"));
             mIrqRcvd = true;
         }
 
         uint8_t setDefaultChannels(void) {
             //DPRINTLN(DBG_VERBOSE, F("hmRadio.h:setDefaultChannels"));
             mTxChIdx    = 2; // Start TX with 40
-            mRxChIdx    = 0; // Start RX with 03            
+            mRxChIdx    = 0; // Start RX with 03
             return mRfChLst[mTxChIdx];
         }
 
@@ -212,7 +211,7 @@ class HmRadio {
             uint16_t crc = ah::crc16(&mTxBuf[10], cnt);
             mTxBuf[10 + cnt++] = (crc >> 8) & 0xff;
             mTxBuf[10 + cnt++] = (crc     ) & 0xff;
-            
+
             // crc over all
             mTxBuf[10 + cnt] = ah::crc8(mTxBuf, 10 + cnt);
 
@@ -220,7 +219,7 @@ class HmRadio {
         }
 
         void sendTimePacket(uint64_t invId, uint8_t cmd, uint32_t ts, uint16_t alarmMesId) {
-            DPRINTLN(DBG_VERBOSE, F("sendTimePacket"));
+            DPRINTLN(DBG_INFO, F("sendTimePacket ") + String(cmd, HEX));
             sendCmdPacket(invId, TX_REQ_INFO, ALL_FRAMES, false);
             mTxBuf[10] = cmd; // cid
             mTxBuf[11] = 0x00;
@@ -266,7 +265,8 @@ class HmRadio {
         }
 
         bool switchRxCh(uint16_t addLoop = 0) {
-            //DPRINTLN(DBG_VERBOSE, F("hmRadio.h:switchRxCh"));
+            if(!mNrf24.isChipConnected())
+                return true;
             mRxLoopCnt += addLoop;
             if(mRxLoopCnt != 0) {
                 mRxLoopCnt--;
@@ -293,6 +293,16 @@ class HmRadio {
         bool isChipConnected(void) {
             //DPRINTLN(DBG_VERBOSE, F("hmRadio.h:isChipConnected"));
             return mNrf24.isChipConnected();
+        }
+
+        uint8_t getDataRate(void) {
+            if(!mNrf24.isChipConnected())
+                return 3; // unkown
+            return mNrf24.getDataRate();
+        }
+
+        bool isPVariant(void) {
+            return mNrf24.isPVariant();
         }
 
 
@@ -360,7 +370,7 @@ class HmRadio {
         uint8_t mTxChIdx;
 
         uint8_t mRfChLst[RF_CHANNELS];
-        
+
         uint8_t mRxChIdx;
         uint16_t mRxLoopCnt;
 

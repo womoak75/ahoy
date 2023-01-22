@@ -6,11 +6,14 @@
 #ifndef __APP_H__
 #define __APP_H__
 
+
 #include "utils/dbg.h"
 #include <Arduino.h>
 #include <RF24.h>
 #include <RF24_config.h>
 #include <ArduinoJson.h>
+
+#include "appInterface.h"
 
 #include "config/settings.h"
 #include "defines.h"
@@ -23,9 +26,11 @@
 #include "hm/payload.h"
 #include "wifi/ahoywifi.h"
 #include "web/web.h"
+#include "web/RestApi.h"
 
 #include "publisher/pubMqtt.h"
 #include "publisher/pubSerial.h"
+
 
 #ifdef THIRDPARTY
 #include "thirdpartyapp.h"
@@ -39,26 +44,38 @@
 
 typedef HmSystem<MAX_NUM_INVERTERS> HmSystemType;
 typedef Payload<HmSystemType> PayloadType;
+typedef Web<HmSystemType> WebType;
+typedef RestApi<HmSystemType> RestApiType;
 typedef PubMqtt<HmSystemType> PubMqttType;
 typedef PubSerial<HmSystemType> PubSerialType;
 
-class ahoywifi;
-class web;
+// PLUGINS
+#if defined(ENA_NOKIA) || defined(ENA_SSD1306)
+    #include "plugins/MonochromeDisplay/MonochromeDisplay.h"
+    typedef MonochromeDisplay<HmSystemType> MonoDisplayType;
+#endif
 
-class app : public ah::Scheduler {
+
+class app : public IApp, public ah::Scheduler {
     public:
-        app() : ah::Scheduler() {}
+        app();
         ~app() {}
 
-        void setup(uint32_t timeout);
+        void setup(void);
         void loop(void);
         void handleIntr(void);
         void cbMqtt(char* topic, byte* payload, unsigned int length);
         void saveValues(void);
         void resetPayload(Inverter<>* iv);
         bool getWifiApActive(void);
-        void scanAvailNetworks(void);
-        void getAvailNetworks(JsonObject obj);
+
+        uint32_t getUptime() {
+            return Scheduler::getUptime();
+        }
+
+        uint32_t getTimestamp() {
+            return Scheduler::getTimestamp();
+        }
 #ifdef THIRDPARTY
         void setThirdpartyApp(thirdpartyApp* _tpApp) {
             tpApp = _tpApp;
@@ -68,156 +85,149 @@ class app : public ah::Scheduler {
         }
 #endif
 
-        void saveSettings(void) {
-            mSettings.saveSettings();
+        bool saveSettings() {
+            mShowRebootRequest = true;
+            return mSettings.saveSettings();
         }
 
         bool eraseSettings(bool eraseWifi = false) {
             return mSettings.eraseSettings(eraseWifi);
         }
 
+        statistics_t *getStatistics() {
+            return &mStat;
+        }
+
+        void scanAvailNetworks() {
+            mWifi.scanAvailNetworks();
+        }
+
+        void getAvailNetworks(JsonObject obj) {
+            mWifi.getAvailNetworks(obj);
+        }
+
+        void setRebootFlag() {
+            once(std::bind(&app::tickReboot, this), 1);
+        }
+
+        const char *getVersion() {
+            return mVersion;
+        }
+
+        uint32_t getSunrise() {
+            return mSunrise;
+        }
+
+        uint32_t getSunset() {
+            return mSunset;
+        }
+
+        bool getSettingsValid() {
+            return mSettings.getValid();
+        }
+
+        bool getRebootRequestState() {
+            return mShowRebootRequest;
+        }
+
+        void setMqttDiscoveryFlag() {
+            once(std::bind(&PubMqttType::sendDiscoveryConfig, &mMqtt), 1);
+        }
+
+        bool getMqttIsConnected() {
+            return mMqtt.isConnected();
+        }
+
+        uint32_t getMqttTxCnt() {
+            return mMqtt.getTxCnt();
+        }
+
+        uint32_t getMqttRxCnt() {
+            return mMqtt.getRxCnt();
+        }
+
+        bool getProtection() {
+            return mWeb.getProtection();
+        }
+
         uint8_t getIrqPin(void) {
             return mConfig->nrf.pinIrq;
         }
 
-        uint64_t Serial2u64(const char *val) {
-            char tmp[3];
-            uint64_t ret = 0ULL;
-            uint64_t u64;
-            memset(tmp, 0, 3);
-            for(uint8_t i = 0; i < 6; i++) {
-                tmp[0] = val[i*2];
-                tmp[1] = val[i*2 + 1];
-                if((tmp[0] == '\0') || (tmp[1] == '\0'))
-                    break;
-                u64 = strtol(tmp, NULL, 16);
-                ret |= (u64 << ((5-i) << 3));
-            }
-            return ret;
-        }
-
-        String getDateTimeStr(time_t t) {
-            char str[20];
-            if(0 == t)
-                sprintf(str, "n/a");
-            else
-                sprintf(str, "%04d-%02d-%02d %02d:%02d:%02d", year(t), month(t), day(t), hour(t), minute(t), second(t));
-            return String(str);
-        }
-
         String getTimeStr(uint32_t offset = 0) {
             char str[10];
-            if(0 == mUtcTimestamp)
+            if(0 == mTimestamp)
                 sprintf(str, "n/a");
             else
-                sprintf(str, "%02d:%02d:%02d ", hour(mUtcTimestamp + offset), minute(mUtcTimestamp + offset), second(mUtcTimestamp + offset));
+                sprintf(str, "%02d:%02d:%02d ", hour(mTimestamp + offset), minute(mTimestamp + offset), second(mTimestamp + offset));
             return String(str);
         }
 
-        inline uint32_t getUptime(void) {
-            return mUptimeSecs;
+        uint32_t getTimezoneOffset() {
+            return mApi.getTimezoneOffset();
         }
 
-        inline uint32_t getTimestamp(void) {
-            return mUtcTimestamp;
+        void getSchedulerInfo(uint8_t *max) {
+            getStat(max);
         }
 
         void setTimestamp(uint32_t newTime) {
             DPRINTLN(DBG_DEBUG, F("setTimestamp: ") + String(newTime));
             if(0 == newTime)
-                mUpdateNtp = true;
+                mWifi.getNtpTime();
             else
-                mUtcTimestamp = newTime;
+                Scheduler::setTimestamp(newTime);
         }
-
-        inline uint32_t getSunrise(void) {
-            return mSunrise;
-        }
-        inline uint32_t getSunset(void) {
-            return mSunset;
-        }
-        inline uint32_t getLatestSunTimestamp(void) {
-            return mLatestSunTimestamp;
-        }
-
-        inline bool mqttIsConnected(void) { return mMqtt.isConnected(); }
-        inline bool getSettingsValid(void) { return mSettings.getValid(); }
-        inline bool getRebootRequestState(void) { return mShowRebootRequest; }
-        inline uint32_t getMqttTxCnt(void) { return mMqtt.getTxCnt(); }
 
         HmSystemType *mSys;
-        bool mShouldReboot;
-        bool mFlagSendDiscoveryConfig;
 
     private:
         void resetSystem(void);
 
-        void setupMqtt(void);
+        void payloadEventListener(uint8_t cmd) {
+            #if !defined(AP_ONLY)
+            mMqtt.payloadEventListener(cmd);
+            #endif
+            #if defined(ENA_NOKIA) || defined(ENA_SSD1306)
+            mMonoDisplay.payloadEventListener(cmd);
+            #endif
+        }
+
+        void mqttSubRxCb(JsonObject obj);
 
         void setupLed(void);
         void updateLed(void);
 
-        void uptimeTick(void) {
-            mUptimeSecs++;
-            if (0 != mUtcTimestamp)
-                mUtcTimestamp++;
+        void tickReboot(void) {
+            DPRINTLN(DBG_INFO, F("Rebooting..."));
+            ESP.restart();
+        }
 
-            if (mShouldReboot) {
-                DPRINTLN(DBG_INFO, F("Rebooting..."));
-                ESP.restart();
+        void tickNtpUpdate(void);
+        void tickCalcSunrise(void);
+        void tickIVCommunication(void);
+        void tickSend(void);
+        /*void tickSerial(void) {
+            if(Serial.available() == 0)
+                return;
+
+            uint8_t buf[80];
+            uint8_t len = Serial.readBytes(buf, 80);
+            DPRINTLN(DBG_INFO, "got serial data, len: " + String(len));
+            for(uint8_t i = 0; i < len; i++) {
+                if((0 != i) && (i % 8 == 0))
+                    DBGPRINTLN("");
+                DBGPRINT(String(buf[i], HEX) + " ");
             }
-
-
-
-            if (mUpdateNtp) {
-                mUpdateNtp = false;
-                mUtcTimestamp = mWifi->getNtpTime();
-                DPRINTLN(DBG_INFO, F("[NTP]: ") + getDateTimeStr(mUtcTimestamp) + F(" UTC"));
-            }
-        }
-
-        void minuteTick(void) {
-            if(0 == mUtcTimestamp) {
-                if(!mWifi->getApActive())
-                    mUpdateNtp = true;
-            }
-        }
-
-        void ntpUpdateTick(void) {
-            if (!mWifi->getApActive())
-                mUpdateNtp = true;
-        }
-
-        void stats(void) {
-            DPRINTLN(DBG_VERBOSE, F("main.h:stats"));
-            #ifdef ESP8266
-                uint32_t free;
-                uint16_t max;
-                uint8_t frag;
-                ESP.getHeapStats(&free, &max, &frag);
-            #elif defined(ESP32)
-                uint32_t free;
-                uint32_t max;
-                uint8_t frag;
-                free = ESP.getFreeHeap();
-                max = ESP.getMaxAllocHeap();
-                frag = 0;
-            #endif
-            DPRINT(DBG_VERBOSE, F("free: ") + String(free));
-            DPRINT(DBG_VERBOSE, F(" - max: ") + String(max) + "%");
-            DPRINTLN(DBG_VERBOSE, F(" - frag: ") + String(frag));
-        }
-
-        uint32_t mUptimeSecs;
-        uint8_t mHeapStatCnt;
-
-        uint32_t mUtcTimestamp;
-        bool mUpdateNtp;
+            DBGPRINTLN("");
+        }*/
 
         bool mShowRebootRequest;
+        bool mIVCommunicationOn;
 
-        ahoywifi *mWifi;
-        web *mWeb;
+        ahoywifi mWifi;
+        WebType mWeb;
+        RestApiType mApi;
         PayloadType mPayload;
         PubSerialType mPubSerial;
 
@@ -225,13 +235,12 @@ class app : public ah::Scheduler {
         settings mSettings;
         settings_t *mConfig;
 
-        uint16_t mSendTicker;
         uint8_t mSendLastIvId;
+        uint8_t mSendTickerId;
 
         statistics_t mStat;
 
         // timer
-        uint32_t mTicker;
         uint32_t mRxTicker;
 
         // mqtt
@@ -241,7 +250,11 @@ class app : public ah::Scheduler {
         // sun
         int32_t mCalculatedTimezoneOffset;
         uint32_t mSunrise, mSunset;
-        uint32_t mLatestSunTimestamp;
+
+        // plugins
+        #if defined(ENA_NOKIA) || defined(ENA_SSD1306)
+        MonoDisplayType mMonoDisplay;
+        #endif
 
 #ifdef THIRDPARTY
         // thirdparty

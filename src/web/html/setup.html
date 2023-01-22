@@ -26,6 +26,7 @@
                 <span></span>
             </a>
             <div id="topnav" class="hide"></div>
+            <div id="wifiicon" class="info"></div>
         </div>
         <div id="wrapper">
             <div id="content">
@@ -36,12 +37,9 @@
                         <legend class="des">Device Host Name</legend>
                         <label for="device">Device Name</label>
                         <input type="text" name="device" class="text"/>
-                        <label for="adminpwd">Admin Password</label>
-                        <input type="password" name="adminpwd" class="text" value="{PWD}"/>
-                        <input type="hidden" name="disclaimer" value="false" id="disclaimer">
                     </fieldset>
 
-                    <button type="button" class="s_collapsible">WiFi</button>
+                    <button type="button" class="s_collapsible">Network</button>
                     <div class="s_content">
                         <fieldset>
                             <legend class="des">WiFi</legend>
@@ -50,7 +48,7 @@
                             <input type="button" name="scanbtn" id="scanbtn" class="btn" value="scan" onclick="scan()"/><br/>
                             <label for="networks">Avail Networks</label>
                             <select name="networks" id="networks" onChange="selNet()">
-                                <option value="-1">not scanned</option>
+                                <option value="-1" selected disabled hidden>not scanned</option>
                             </select>
                             <label for="ssid">SSID</label>
                             <input type="text" name="ssid" class="text"/>
@@ -73,6 +71,18 @@
                             <input type="text" name="ipDns2" class="text" maxlength="15" />
                             <label for="ipGateway">Gateway</label>
                             <input type="text" name="ipGateway" class="text" maxlength="15" />
+                        </fieldset>
+                    </div>
+
+                    <button type="button" class="s_collapsible">Protection</button>
+                    <div class="s_content">
+                        <fieldset>
+                            <legend class="des">Protection</legend>
+                            <label for="adminpwd">Admin Password</label>
+                            <input type="password" name="adminpwd" class="text" value="{PWD}"/>
+                            <input type="hidden" name="disclaimer" value="false" id="disclaimer">
+                            <p>Select pages which should be protected by password</p>
+                            <div id="prot_mask"></div>
                         </fieldset>
                     </div>
 
@@ -116,6 +126,8 @@
                         <input type="text" class="text" name="sunLat"/>
                         <label for="sunLon">Longitude (decimal)</label>
                         <input type="text" class="text" name="sunLon"/>
+                        <label for="sunOffs">Offset (pre sunrise, post sunset)</label>
+                        <select name="sunOffs"></select>
                         <br>
                         <label for="sunDisNightCom">disable night communication</label>
                         <input type="checkbox" class="cb" name="sunDisNightCom"/><br/>
@@ -127,7 +139,7 @@
                     <fieldset>
                     <legend class="des">MQTT</legend>
                         <label for="mqttAddr">Broker / Server IP</label>
-                        <input type="text" class="text" name="mqttAddr" maxlength="32" />
+                        <input type="text" class="text" name="mqttAddr"/>
                         <label for="mqttPort">Port</label>
                         <input type="text" class="text" name="mqttPort"/>
                         <label for="mqttUser">Username (optional)</label>
@@ -135,7 +147,7 @@
                         <label for="mqttPwd">Password (optional)</label>
                         <input type="password" class="text" name="mqttPwd"/>
                         <label for="mqttTopic">Topic</label>
-                        <input type="text" class="text" name="mqttTopic"/>
+                        <input type="text" class="text" name="mqttTopic" pattern="[A-Za-z0-9.\-_\+\/]+" title="Invalid input" />
                         <label for="mqttBtn">Discovery Config (homeassistant)</label>
                         <input type="button" name="mqttDiscovery" id="mqttDiscovery" class="btn" value="send" onclick="sendDiscoveryConfig()"/>
                         <span id="apiResultMqtt"></span>
@@ -162,11 +174,15 @@
                     </fieldset>
                     </div>
 
-                    <label for="reboot">Reboot device after successful save</label>
-                    <input type="checkbox" class="cb" name="reboot"/>
-                    <input type="submit" value="save" class="btn right"/><br/>
-                    <br/>
-                    <a href="/get_setup" target="_blank">Download your settings (JSON file)</a> (only saved values)
+                    <div class="mt-3">
+                        <label for="reboot">Reboot device after successful save</label>
+                        <input type="checkbox" class="cb" name="reboot" checked />
+                        <input type="submit" value="save" class="btn right"/>
+                    </div>
+                    <div class="hr mb-3 mt-3"></div>
+                    <div class="mb-4">
+                        <a href="/get_setup" target="_blank">Download your settings (JSON file)</a> (only saved values)
+                    </div>
                 </form>
             </div>
         </div>
@@ -194,7 +210,7 @@
 
             document.getElementById("btnAdd").addEventListener("click", function() {
                 if(highestId <= (maxInv-1))
-                    ivHtml(JSON.parse('{"name":"","serial":"","channels":4,"ch_max_power":[0,0,0,0],"ch_name":["","","",""]}'), highestId + 1);
+                    ivHtml(JSON.parse('{"enabled":true,"name":"","serial":"","channels":4,"ch_max_power":[0,0,0,0],"ch_name":["","","",""]}'), highestId + 1);
             });
 
             function apiCbWifi(obj) {
@@ -226,7 +242,7 @@
                 var date = new Date();
                 var obj = new Object();
                 obj.cmd = "set_time";
-                obj.ts = parseInt(date.getTime() / 1000);
+                obj.val = parseInt(date.getTime() / 1000);
                 getAjax("/api/setup", apiCbNtp, "POST", JSON.stringify(obj));
             }
 
@@ -234,7 +250,7 @@
                 var obj = new Object();
                 obj.cmd = "scan_wifi";
                 getAjax("/api/setup", apiCbWifi, "POST", JSON.stringify(obj));
-                setTimeout(function() {getAjax('/api/setup/networks', listNetworks)}, 7000);
+                setTimeout(function() {getAjax('/api/setup/networks', listNetworks)}, 5000);
             }
 
             function syncTime() {
@@ -266,12 +282,16 @@
                 iv.appendChild(des("Inverter " + id));
                 id = "inv" + id;
 
+                iv.appendChild(lbl(id + "Enable", "Communication Enable"));
+                var en = inp(id + "Enable", null, null, ["cb"], id + "Enable", "checkbox");
+                en.checked = obj["enabled"];
+                iv.appendChild(en);
+                iv.appendChild(br());
 
                 iv.appendChild(lbl(id + "Addr", "Serial Number (12 digits)*"));
-                var addr = inp(id + "Addr", obj["serial"], 12)
+                var addr = inp(id + "Addr", obj["serial"], 12);
                 iv.appendChild(addr);
                 ['keyup', 'change'].forEach(function(evt) {
-
                     addr.addEventListener(evt, (e) => {
                         var serial = addr.value.substring(0,4);
                         var max = 0;
@@ -298,28 +318,31 @@
                     })
                 });
 
-                for(var i of [["Name", "name", "Name*", 32]]) {
-                    iv.appendChild(lbl(id + i[0], i[2]));
-                    iv.appendChild(inp(id + i[0], obj[i[1]], i[3]));
-                }
+                iv.append(
+                    lbl(id + "Name", "Name*"),
+                    inp(id + "Name", obj["name"], 32, ["text"], null, "text", "[A-Za-z0-9.\\-_\\+\\/]+", "Invalid input")
+                );
 
-                for(var j of [["ModPwr", "ch_max_power", "Max Module Power (Wp)", 4], ["ModName", "ch_name", "Module Name", 16]]) {
+                for(var j of [["ModPwr", "ch_max_power", "Max Module Power (Wp)", 4, "[0-9]+"], ["ModName", "ch_name", "Module Name", 16, null]]) {
                     var cl = (re.test(obj["serial"])) ? null : ["hide"];
                     iv.appendChild(lbl(null, j[2], cl, "lbl" + id + j[0]));
                     d = div([j[0]]);
                     i = 0;
                     cl = (re.test(obj["serial"])) ? ["text", "sh"] : ["text", "sh", "hide"];
                     for(it of obj[j[1]]) {
-                        d.appendChild(inp(id + j[0] + i, it, j[3], cl, id + j[0] + i));
+                        d.appendChild(inp(id + j[0] + i, it, j[3], cl, id + j[0] + i, "text", j[4], "Invalid input"));
                         i++;
                     }
                     iv.appendChild(d);
                 }
-                iv.appendChild(br());
-                iv.appendChild(lbl(id + "lbldel", "Delete"));
+
                 var del = inp(id+"del", "X", 0, ["btn", "btnDel"], id+"del", "button");
-                iv.appendChild(del);
                 del.addEventListener("click", delIv);
+                iv.append(
+                    br(),
+                    lbl(id + "lbldel", "Delete"),
+                    del
+                );
             }
 
             function ivGlob(obj) {
@@ -333,8 +356,23 @@
                 var e = document.getElementsByName("adminpwd")[0];
                 if(!obj["pwd_set"])
                     e.value = "";
+                var d = document.getElementById("prot_mask");
+                var a = ["Index", "Live", "Serial / Console", "Settings", "Update", "System"]
+                for(var i = 0; i < 6; i++) {
+                    var chkd = ((obj["prot_mask"] & (1 << i)) == (1 << i));
+                    var sp = lbl("protMask" + i, a[i]);
+                    var cb = inp("protMask" + i, null, null, ["cb"], "protMask" + i, "checkbox", null, null, chkd);
+                    if(0 == i)
+                        d.replaceChildren(sp, cb, br());
+                    else
+                        d.append(sp, cb, br());
+                }
+            }
+
+            function parseGeneric(obj) {
                 parseVersion(obj);
                 parseESP(obj);
+                parseRssi(obj);
             }
 
             function parseStaticIp(obj) {
@@ -364,6 +402,10 @@
                 document.getElementsByName("sunLat")[0].value = obj["lat"];
                 document.getElementsByName("sunLon")[0].value = obj["lon"];
                 document.getElementsByName("sunDisNightCom")[0].checked = obj["disnightcom"];
+                const sel = document.getElementsByName("sunOffs")[0];
+                for(var i = 0; i <= 60; i++) {
+                    sel.appendChild(opt(i, i + " minutes", (i == (obj["offs"] / 60))));
+                }
             }
 
             function parsePinout(obj, type) {
@@ -448,6 +490,7 @@
                 if(null != root) {
                     parseMenu(root["menu"]);
                     parseSys(root["system"]);
+                    parseGeneric(root["generic"]);
                     parseStaticIp(root["static_ip"]);
                     parseIv(root["inverter"]);
                     parseMqtt(root["mqtt"]);

@@ -11,8 +11,12 @@
 #endif
 
 #include <cstdint>
-#include "app.h"
+#include <queue>
+#include <ArduinoJson.h>
+#include "ESPAsyncWebServer.h"
+#include "appInterface.h"
 #include "web/html/h/thirdparty_html.h"
+class IApp;
 
 /**
  * thirdpartyApp
@@ -30,7 +34,7 @@ class thirdpartyApp {
          * 
          * @param app - pointer to ahoi app
         */
-        virtual void setup(app *app) = 0;
+        virtual void setup(IApp *app) = 0;
         /**
          * loop
          * 
@@ -38,7 +42,7 @@ class thirdpartyApp {
          * 
          * @param app - pointer to ahoi app
         */
-        virtual void loop(app *app) = 0;
+        virtual void loop(IApp *app) = 0;
         /**
          * inverterCallback
          * 
@@ -52,7 +56,8 @@ class thirdpartyApp {
         /**
          * mqttCallback
          * 
-         * will be called at end of app::cbMqtt
+         * !!!!!!!!!!!!! does not work anymore.
+         * but we keep it for later use :)
          * 
          *  @param topic - topic for which data was receiced (e.g. 'inverter/thirdparty/cmd')
          *  @param payload - byte* for received data 
@@ -80,28 +85,29 @@ class thirdpartyApp {
         }
         /**
          * called when data is sent to /api/thirdparty HttpPost
-         * @param json request - DynamicJsonDocument
+         * @param json request - JsonObject
          * @param json respone object - JsonObject
          */
-        virtual bool onApiPost(DynamicJsonDocument jsonIn, JsonObject jsonOut) {
+        virtual bool onApiPost(JsonObject jsonIn, JsonObject jsonOut) {
             // we don't care, but pretend everything is alright - developer default ;)
             return true;
+        }
+        /**
+         * called when control request is receiced from mqtt
+         * @param json request object -JsonObject
+         */
+        virtual void onCtrlRequest(JsonObject jsondata) {
+            // we don't care - developer default ;)
         }
         /**
          * called from ahoi app
          * frequency depends on MQTT_INTERVAL (default 60s)
          */
-        void publish(app *app) {
+        void publish(IApp *app) {
             while(!q.empty()) {
                 qentry entry = q.front();
-                if(!entry.appendtopic) {
-                    if(publishFkt2) {
-                        publishFkt2((const char *)buffer+entry.topicindex,(const char *)buffer+entry.dataindex,false);
-                    }
-                } else {
-                    if(publishFkt) {
-                         publishFkt((const char *)buffer+entry.topicindex,(const char *)buffer+entry.dataindex);
-                    }
+                if(publishFkt) {
+                    publishFkt((const char *)buffer+entry.topicindex,(const char *)buffer+entry.dataindex,false,entry.appendtopic);
                 }
                 q.pop();
             }
@@ -131,9 +137,8 @@ class thirdpartyApp {
             q.push(entry);
             return true;
         }
-        void setPublishFkt(std::function<void(const char *topic, const char *msg)> _publishFkt,std::function<void(const char *topic, const char *msg, boolean retained)> _publishFkt2) {
+        void setPublishFkt(std::function<void(const char *topic, const char *msg, boolean retained, boolean append)> _publishFkt) {
             publishFkt = _publishFkt;
-            publishFkt2 = _publishFkt2;
         }
         private:
         char buffer[THIRDPARTY_MSG_BUFFERSIZE];
@@ -144,8 +149,7 @@ class thirdpartyApp {
             bool appendtopic;
         } qentry;
         std::queue<qentry> q;
-        std::function<void(const char *topic, const char *msg)> publishFkt = nullptr;
-        std::function<void(const char *topic, const char *msg, boolean retained)> publishFkt2 = nullptr;
+        std::function<void(const char *topic, const char *msg, boolean retained, boolean append)> publishFkt = nullptr;
 };
 
 #endif /*__THIRDPARTYAPP_H__*/
