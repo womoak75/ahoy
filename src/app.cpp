@@ -137,6 +137,16 @@ void app::loop(void) {
 
 #if !defined(AP_ONLY)
     mMqtt.loop();
+    #ifdef THIRDPARTY
+    if(tpApp) {
+        tpApp->publish();
+    }
+    #endif
+#endif
+#ifdef THIRDPARTY
+    if(tpApp) {
+        tpApp->loop();
+    }
 #endif
 }
 
