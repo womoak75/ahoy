@@ -14,6 +14,8 @@
 
 #include "../appInterface.h"
 
+typedef std::function<void(JsonObject,uint8_t)> jsonCb;
+
 template<class HMSYSTEM>
 class RestApi {
     public:
@@ -49,7 +51,7 @@ class RestApi {
             else if(obj[F("path")] == "setup")
                 setSetup(obj, dummy);
         }
-
+        jsonCb mJsonCb = NULL;
     private:
         void onApi(AsyncWebServerRequest *request) {
             mFreeHeap = ESP.getFreeHeap();
@@ -361,6 +363,9 @@ class RestApi {
                 obj[F("name")][i++] = "-";
                 obj[F("name")][i] = "Logout";
                 obj[F("link")][i++] = "/logout";
+            }
+            if(NULL != mJsonCb) {
+                (mJsonCb)(obj,i);
             }
         }
 

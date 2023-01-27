@@ -25,6 +25,7 @@
 #define QOS_0   0
 
 typedef std::function<void(JsonObject)> subscriptionCb;
+typedef std::function<void(const char*, const uint8_t*, size_t)> messageCb;
 
 template<class HMSYSTEM>
 class PubMqtt {
@@ -34,6 +35,7 @@ class PubMqtt {
             mTxCnt = 0;
             mEnReconnect = false;
             mSubscriptionCb = NULL;
+            mMessageCb = NULL;
             mIvAvail = true;
             memset(mLastIvState, 0xff, MAX_NUM_INVERTERS);
         }
@@ -124,6 +126,10 @@ class PubMqtt {
 
         void setSubscriptionCb(subscriptionCb cb) {
             mSubscriptionCb = cb;
+        }
+
+        void setMessageCb(messageCb cb) {
+            mMessageCb = cb;
         }
 
         inline bool isConnected() {
@@ -230,6 +236,9 @@ class PubMqtt {
 
             subscribe("ctrl/#");
             subscribe("setup/#");
+#ifdef THIRDPARTY
+            subscribe("thirdparty/#");
+#endif
             //subscribe("status/#");
         }
 
@@ -312,7 +321,8 @@ class PubMqtt {
             DPRINTLN(DBG_INFO, "json: " + String(out));*/
             if(NULL != mSubscriptionCb)
                 (mSubscriptionCb)(root);
-
+            if(NULL != mMessageCb)
+                (mMessageCb)(topic,payload,len);
             mRxCnt++;
         }
 
@@ -492,6 +502,7 @@ class PubMqtt {
         std::queue<uint8_t> mSendList;
         bool mEnReconnect;
         subscriptionCb mSubscriptionCb;
+        messageCb mMessageCb;
         bool mIvAvail; // shows if at least one inverter is available
         uint8_t mLastIvState[MAX_NUM_INVERTERS];
 

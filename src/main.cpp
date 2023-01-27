@@ -6,9 +6,19 @@
 #include "utils/dbg.h"
 #include "app.h"
 #include "config/config.h"
+#ifdef THIRDPARTY
+#include "thirdparty/pluginapp.h"
+#include "thirdparty/demoplugin.h"
+#include "thirdparty/demoplugin2.h"
+#endif
 
-
+#ifdef THIRDPARTY
+pluginapp myApp;
+demoPlugin plugin1 = demoPlugin(1, "demoplugin");
+demoPlugin2 plugin2 = demoPlugin2(2, "demoplugin2");
+#else
 app myApp;
+#endif
 
 //-----------------------------------------------------------------------------
 IRAM_ATTR void handleIntr(void) {
@@ -18,7 +28,12 @@ IRAM_ATTR void handleIntr(void) {
 
 //-----------------------------------------------------------------------------
 void setup() {
+    #ifdef THIRDPARTY
+    myApp.addPlugin(&plugin1);
+    myApp.addPlugin(&plugin2);
+    #endif
     myApp.setup();
+
 
     // TODO: move to HmRadio
     attachInterrupt(digitalPinToInterrupt(myApp.getIrqPin()), handleIntr, FALLING);

@@ -101,6 +101,7 @@ const calcFunc_t<T> calcFunctions[] = {
     { CALC_IRR_CH,  &calcIrradiation   }
 };
 
+typedef std::function<void(uint8_t inverterId, uint8_t fieldId, float value)> inverterCb;
 
 template <class REC_TYP>
 class Inverter {
@@ -121,6 +122,7 @@ class Inverter {
         record_t<REC_TYP> recordAlarm;       // structure for alarm values
         String        lastAlarmMsg;
         bool          initialized;           // needed to check if the inverter was correctly added (ESP32 specific - union types are never null)
+        inverterCb mInverterCb = NULL;
 
         Inverter() {
             powerLimit[0] = 0xffff;       // 65535 W Limit -> unlimited
@@ -242,6 +244,9 @@ class Inverter {
                                 rec->record[pos] = (REC_TYP)(val) / (REC_TYP)(div);
                             else
                                 rec->record[pos] = (REC_TYP)(val);
+                        }
+                        if(NULL != mInverterCb) {
+                            mInverterCb(id,rec->assign[pos].fieldId,rec->record[pos]);
                         }
                     }
                 }
