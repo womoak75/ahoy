@@ -3,11 +3,6 @@
 
 #include "plugin.h"
 
-class demoPlugin2Message : public PluginMessage {
-    public:
-        uint8_t demoPlugin2Var1 = 42;
-};
-
 class demoPlugin2 : public Plugin
 {
 public:
@@ -16,8 +11,10 @@ public:
 
     void setup() {
         addTimerCb(SECOND,[this](){
-             demoPlugin2Message msg;
-             getSystem()->publishInternal(this,&msg);
+            PluginMessage msg;
+            msg.valuename = "SOMEOTHERPLUGINOUTPUT";
+            msg.value = 23;
+            publishInternal(&msg);
         });
     }
     void loop() {
@@ -49,7 +46,7 @@ public:
 
      void internalCallback(PluginMessage *message) {
          // internal topic: '{pluginname}/{dataidentifier}'
-         
+        DPRINTLN(DBG_INFO, F("demoplugin2.internalCallback: ")+String(message->valuename)+String(" = ")+String(message->value));
      }
      MqttMessage mqttMsg;
 };

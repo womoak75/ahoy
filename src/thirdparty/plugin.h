@@ -3,6 +3,9 @@
 
 class PluginMessage
 {
+    public:
+    char* valuename = NULL;
+    float value;
 };
 
 class InverterMessage

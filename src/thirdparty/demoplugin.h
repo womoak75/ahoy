@@ -2,12 +2,6 @@
 #define __DEMOPLUGIN_H__
 
 #include "plugin.h"
-#include "demoplugin2.h"
-
-class demoPluginMessage : public PluginMessage {
-    public:
-        uint8_t demoPluginVar1 = 23;
-};
 
 class demoPlugin : public Plugin
 {
@@ -15,8 +9,11 @@ public:
     demoPlugin() : Plugin(999,"demo") {}
     demoPlugin(int id, const char* name) : Plugin(id,name) {}
     void setup() {
-        addTimerCb(SECOND,[](){
-            DPRINTLN(DBG_INFO, F("demoplugin.tick"));
+        addTimerCb(SECOND,[this](){
+            PluginMessage msg;
+            msg.valuename = "SOMEPLUGINOUTPUT";
+            msg.value = 42;
+            publishInternal(&msg);
         });
     }
     void loop() {
@@ -44,14 +41,11 @@ public:
          // ahoi topic: 'DEF_MQTT_TOPIC/devcontrol/#'
          // thirdparty topic: 'DEF_MQTT_TOPIC/thirdparty/#'
          // default for DEF_MQTT_TOPIC = "inverter" (see config.h)
+         DPRINTLN(DBG_INFO, F("demoplugin.mqttCallback ")+String(message->topic));
       }
 
      void internalCallback(PluginMessage *message) {
-         DPRINTLN(DBG_INFO, F("demoplugin.internalCallback "));
-         demoPlugin2Message* mes = static_cast<demoPlugin2Message*>(message);
-         if(mes) {
-            DPRINTLN(DBG_INFO, F("demoplugin message received: ")+String(mes->demoPlugin2Var1));
-         }
+        DPRINTLN(DBG_INFO, F("demoplugin.internalCallback: ")+String(message->valuename)+String(" = ")+String(message->value));
      }
     MqttMessage mqttMsg;
 };
