@@ -18,6 +18,9 @@ public:
             enqueueMessage((char*)"out",(char*)"ahoi world!",true); 
         });
     }
+    void onMqttSubscribe() {
+        subscribeMqtt((char*)"external/topic",false);
+    }
     void loop() {
         // main loop
      }

@@ -15,6 +15,7 @@ public:
         DPRINTLN(DBG_INFO, F("setupCB: "));
         mMqtt = mqtt;
         mqtt->setMessageCb(std::bind(&pluginapp::onMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        mqtt->setOnConnectCb(std::bind(&pluginapp::onMqttConnect, this));
         webtype->getWebSrvPtr()->on("/thirdparty", HTTP_ANY, std::bind(&pluginapp::onHttp, this, std::placeholders::_1));
         restapi->mJsonCb = std::bind(&pluginapp::onMenu, this, std::placeholders::_1, std::placeholders::_2);
         Inverter<> *iv;
@@ -49,31 +50,7 @@ public:
         }
         publish();
     }
-    void onMessage(const char *topic, const uint8_t *payload, size_t len)
-    {
-        DPRINTLN(DBG_INFO, F("onMessage: ") + String(topic));
-        MqttMessage msg;
-        msg.topic = (char *)topic;
-        msg.payload = (uint8_t *)payload;
-        msg.length = len;
-        for (unsigned int i = 0; i < plugins.size(); i++)
-        {
-            plugins[i]->mqttCallback(&msg);
-        }
-    }
-    void onHttp(AsyncWebServerRequest *request)
-    {
-        DPRINTLN(DBG_INFO, F("onHttp"));
-        AsyncWebServerResponse *response = request->beginResponse_P(200, F("text/html"), thirdparty_html, thirdparty_html_len);
-        response->addHeader(F("Content-Encoding"), "gzip");
-        request->send(response);
-    }
-    void onMenu(JsonObject obj,uint8_t index)
-    {
-        DPRINTLN(DBG_INFO, F("onMenu"));
-        obj[F("name")][index] = "Thirdparty";
-        obj[F("link")][index++] = "/thirdparty";
-    }
+    
     void inverterCallback(uint8_t inverterId, uint8_t fieldId, float value)
     {
         DPRINTLN(DBG_INFO, F("inverterCallback"));
@@ -113,6 +90,13 @@ public:
         entry.pluginid = plugin->getId();
         q.push(entry);
         return true;
+    }
+    void subscribeMqtt(Plugin *plugin, char* topic, bool append) {
+        if(append) {
+            mMqtt->subscribe(topic);
+        } else {
+            mMqtt->subscribeThirdparty(topic);
+        }
     }
     void publish()
     {
@@ -189,6 +173,40 @@ public:
     }
 
 private:
+
+    void onMqttConnect() {
+        mMqtt->subscribe("thirdparty/#");
+        for (unsigned int i = 0; i < plugins.size(); i++)
+        {
+            plugins[i]->onMqttSubscribe();
+        }
+    }
+    void onMessage(const char *topic, const uint8_t *payload, size_t len)
+    {
+        DPRINTLN(DBG_INFO, F("onMessage: ") + String(topic));
+        MqttMessage msg;
+        msg.topic = (char *)topic;
+        msg.payload = (uint8_t *)payload;
+        msg.length = len;
+        for (unsigned int i = 0; i < plugins.size(); i++)
+        {
+            plugins[i]->mqttCallback(&msg);
+        }
+    }
+    void onHttp(AsyncWebServerRequest *request)
+    {
+        DPRINTLN(DBG_INFO, F("onHttp"));
+        AsyncWebServerResponse *response = request->beginResponse_P(200, F("text/html"), thirdparty_html, thirdparty_html_len);
+        response->addHeader(F("Content-Encoding"), "gzip");
+        request->send(response);
+    }
+    void onMenu(JsonObject obj,uint8_t index)
+    {
+        DPRINTLN(DBG_INFO, F("onMenu"));
+        obj[F("name")][index] = "Thirdparty";
+        obj[F("link")][index++] = "/thirdparty";
+    }
+
     PubMqttType *mMqtt;
     char buffer[THIRDPARTY_MSG_BUFFERSIZE];
     uint16_t bufferindex = 0;

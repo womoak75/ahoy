@@ -25,6 +25,7 @@
 #define QOS_0   0
 
 typedef std::function<void(JsonObject)> subscriptionCb;
+typedef std::function<void(void)> onConnectCb;
 typedef std::function<void(const char*, const uint8_t*, size_t)> messageCb;
 
 template<class HMSYSTEM>
@@ -117,7 +118,19 @@ class PubMqtt {
                 mClient.publish(subTopic, QOS_0, retained, payload);
             mTxCnt++;
         }
+#ifdef THIRDPARTY
+        void subscribeThirdparty(const char *topic) {
+            mClient.subscribe(topic, QOS_0);
+        }
 
+        void setMessageCb(messageCb cb) {
+            mMessageCb = cb;
+        }
+
+        void setOnConnectCb(onConnectCb cb) {
+            mOnConnectCb = cb;
+        }
+#endif
         void subscribe(const char *subTopic) {
             char topic[MQTT_TOPIC_LEN + 20];
             snprintf(topic, (MQTT_TOPIC_LEN + 20), "%s/%s", mCfgMqtt->topic, subTopic);
@@ -126,10 +139,6 @@ class PubMqtt {
 
         void setSubscriptionCb(subscriptionCb cb) {
             mSubscriptionCb = cb;
-        }
-
-        void setMessageCb(messageCb cb) {
-            mMessageCb = cb;
         }
 
         inline bool isConnected() {
@@ -236,9 +245,9 @@ class PubMqtt {
 
             subscribe("ctrl/#");
             subscribe("setup/#");
-#ifdef THIRDPARTY
-            subscribe("thirdparty/#");
-#endif
+            if(mOnConnectCb) {
+                (mOnConnectCb)();
+            }
             //subscribe("status/#");
         }
 
@@ -503,6 +512,7 @@ class PubMqtt {
         bool mEnReconnect;
         subscriptionCb mSubscriptionCb;
         messageCb mMessageCb;
+        onConnectCb mOnConnectCb;
         bool mIvAvail; // shows if at least one inverter is available
         uint8_t mLastIvState[MAX_NUM_INVERTERS];
 
