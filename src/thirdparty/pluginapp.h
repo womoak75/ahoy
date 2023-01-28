@@ -94,22 +94,22 @@ public:
      * @param appendTopic - append topic to ahoi prefix (inverter/)
      * @return true, if message was enqueued, false otherwise
      */
-    bool enqueueMessage(Plugin *plugin, MqttMessage *msg)
+    bool enqueueMessage(Plugin *plugin, char *topic, char *data, bool append)
     {
-        size_t topiclen = strlen(msg->topic) + 1;
-        size_t datalen = msg->length + 1;
+        size_t topiclen = strlen(topic) + 1;
+        size_t datalen = strlen(data) + 1;
         if (bufferindex + topiclen + datalen > THIRDPARTY_MSG_BUFFERSIZE)
         {
             return false;
         }
         qentry entry;
         entry.topicindex = bufferindex;
-        memcpy(buffer + bufferindex, msg->topic, topiclen);
+        memcpy(buffer + bufferindex, topic, topiclen);
         bufferindex += topiclen;
         entry.dataindex = bufferindex;
-        memcpy(buffer + bufferindex, msg->payload, datalen);
+        memcpy(buffer + bufferindex, data, datalen);
         bufferindex += datalen;
-        entry.appendtopic = msg->appendTopic;
+        entry.appendtopic = append;
         entry.pluginid = plugin->getId();
         q.push(entry);
         return true;
@@ -133,20 +133,21 @@ public:
         bufferindex = 0;
     }
 
-    void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, std::function<void(void)> timerCb)
+    void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intvaltype, uint32_t interval, std::function<void(void)> timerCb)
     {
-        if (intval == PLUGIN_TIMER_INTVAL::MINUTE)
+        if (intvaltype == PLUGIN_TIMER_INTVAL::MINUTE)
         {
-            everyMin(timerCb);
+            every(timerCb,(interval*60));
         }
-        else if (intval == PLUGIN_TIMER_INTVAL::SECOND)
+        else if (intvaltype == PLUGIN_TIMER_INTVAL::SECOND)
         {
-            everySec(timerCb);
+            every(timerCb,interval);
         }
     }
 
     void publishInternal(Plugin *plugin, PluginMessage *message)
     {
+        message->pluginid = plugin->getId();
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
             if (plugins[i]->getId() != plugin->getId())

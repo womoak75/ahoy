@@ -3,9 +3,12 @@
 
 class PluginMessage
 {
-    public:
-    char* valuename = NULL;
-    float value;
+public:
+    const float truefloat = 1.0;
+    const float falsefloat = 0.0;
+    int pluginid = 0;
+    const char *valuename = NULL;
+    float value = 0;
 };
 
 class InverterMessage
@@ -19,7 +22,7 @@ public:
 class MqttMessage
 {
 public:
-    char *topic;
+    const char *topic;
     uint8_t *payload;
     unsigned int length;
     bool appendTopic = true;
@@ -35,9 +38,9 @@ class Plugin;
 class System
 {
 public:
-    virtual bool enqueueMessage(Plugin *sender, MqttMessage *message) = 0;
+    virtual bool enqueueMessage(Plugin *sender, char *topic, char *data, bool append) = 0;
     virtual void publishInternal(Plugin *sender, PluginMessage *message) = 0;
-    virtual void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, std::function<void(void)> timerCb) = 0;
+    virtual void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, uint32_t interval, std::function<void(void)> timerCb) = 0;
     virtual const Plugin *getPluginById(int pluginid);
     virtual const Plugin *getPluginByName(const char *pluginname);
     virtual int getPluginCount();
@@ -104,34 +107,41 @@ public:
      *  @param payload - byte* for received data
      *  @param length - length of payload
      */
-    virtual void internalCallback(PluginMessage *message) = 0;
+    virtual void internalCallback(const PluginMessage *message) = 0;
 
-    bool enqueueMessage(MqttMessage *message)
+    bool enqueueMessage(char *topic, char *data, bool append)
     {
         if (system)
         {
-            return system->enqueueMessage(this, message);
+            return system->enqueueMessage(this, topic, data, append);
         }
         return false;
     }
-    void publishInternal(PluginMessage *message)
+
+    void publishInternalValue(const char *valueid, float value)
     {
         if (system)
         {
-            system->publishInternal(this, message);
+            PluginMessage message;
+            message.pluginid = this->getId();
+            message.valuename = valueid;
+            message.value = value;
+            system->publishInternal(this, &message);
         }
     }
-    void addTimerCb(PLUGIN_TIMER_INTVAL intval, std::function<void(void)> timerCb)
+
+    void addTimerCb(PLUGIN_TIMER_INTVAL intvaltype, uint32_t interval, std::function<void(void)> timerCb)
     {
         if (system)
         {
-            system->addTimerCb(this, intval, timerCb);
+            system->addTimerCb(this, intvaltype, interval, timerCb);
         }
     }
     const char *name;
-    
+
 protected:
     System *getSystem() { return system; }
+
 private:
     int id;
     System *system;
