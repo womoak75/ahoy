@@ -38,7 +38,8 @@ class Plugin;
 class System
 {
 public:
-    virtual void subscribeMqtt(Plugin *plugin, char* topic, bool append) = 0;
+    virtual void subscribeMqtt(Plugin *plugin, char *topic, bool append) = 0;
+    virtual void ctrlRequest(Plugin *plugin, JsonObject request) = 0;
     virtual bool enqueueMessage(Plugin *sender, char *topic, char *data, bool append) = 0;
     virtual void publishInternal(Plugin *sender, PluginMessage *message) = 0;
     virtual void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, uint32_t interval, std::function<void(void)> timerCb) = 0;
@@ -112,10 +113,19 @@ public:
 
     virtual void onMqttSubscribe() {}
 
-    void subscribeMqtt(char *topic, bool append) {
+    void subscribeMqtt(char *topic, bool append)
+    {
         if (system)
         {
             system->subscribeMqtt(this, topic, append);
+        }
+    }
+
+    void sendCtrlRequest(JsonObject request)
+    {
+        if (system)
+        {
+            system->ctrlRequest(this, request);
         }
     }
 

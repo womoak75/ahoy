@@ -14,6 +14,7 @@ public:
     {
         DPRINTLN(DBG_INFO, F("setupCB: "));
         mMqtt = mqtt;
+        mRestapi = restapi;
         mqtt->setMessageCb(std::bind(&pluginapp::onMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
         mqtt->setOnConnectCb(std::bind(&pluginapp::onMqttConnect, this));
         webtype->getWebSrvPtr()->on("/thirdparty", HTTP_ANY, std::bind(&pluginapp::onHttp, this, std::placeholders::_1));
@@ -63,7 +64,9 @@ public:
             plugins[i]->inverterCallback(&message);
         }
     }
-
+    void ctrlRequest(Plugin *plugin, JsonObject request) {
+        mRestapi->ctrlRequest(request);
+    }
     /**
      * enqueue a mqtt message in send queue
      * @param topic - mqtt topic
@@ -208,6 +211,7 @@ private:
     }
 
     PubMqttType *mMqtt;
+    RestApiType *mRestapi;
     char buffer[THIRDPARTY_MSG_BUFFERSIZE];
     uint16_t bufferindex = 0;
     typedef struct
