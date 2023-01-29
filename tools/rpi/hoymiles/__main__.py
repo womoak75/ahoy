@@ -17,9 +17,30 @@ from suntimes import SunTimes
 import argparse
 import yaml
 from yaml.loader import SafeLoader
-import paho.mqtt.client
 import hoymiles
 import logging
+
+################################################################################
+""" Signal Handler """
+################################################################################
+# from signal import signal, Signals, SIGINT, SIGTERM, SIGKILL, SIGHUP
+from signal import *
+def signal_handler(sig_num, frame):
+  signame = Signals(sig_num).name
+  logging.info(f'Stop by Signal {signame} ({sig_num})')
+  print (f'Stop by Signal <{signame}> ({sig_num}) at: {time.strftime("%d.%m.%Y %H:%M:%S")}')
+
+  if mqtt_client:
+     mqtt_client.disco()
+
+  sys.exit(0)
+
+signal(SIGINT,  signal_handler)   # Interrupt from keyboard (CTRL + C)
+signal(SIGTERM, signal_handler)   # Signal Handler from terminating processes
+signal(SIGHUP,  signal_handler)   # Hangup detected on controlling terminal or death of controlling process
+# signal(SIGKILL, signal_handler)   # Signal Handler SIGKILL and SIGSTOP cannot be caught, blocked, or ignored!!
+################################################################################
+################################################################################
 
 class InfoCommands(IntEnum):
     InverterDevInform_Simple = 0  # 0x00
@@ -174,7 +195,7 @@ def poll_inverter(inverter, dtu_ser, do_init, retries):
             # get decoder object
             result = decoder.decode()
             if hoymiles.HOYMILES_DEBUG_LOGGING:
-               logging.debug(f'{c_datetime} Decoded: {result.__dict__()}')
+               logging.info(f'{c_datetime} Decoded: {result.__dict__()}')
 
             # check decoder object for output
             if isinstance(result, hoymiles.decoders.StatusResponse):
@@ -284,7 +305,7 @@ if __name__ == '__main__':
         logging.error("Could not load config file. Try --help")
         sys.exit(2)
     except yaml.YAMLError as e_yaml:
-        logging.error('Failed to load config file {global_config.config_file}: {e_yaml}')
+        logging.error(f'Failed to load config file {global_config.config_file}: {e_yaml}')
         sys.exit(1)
 
     # read AHOY configuration file and prepare logging
