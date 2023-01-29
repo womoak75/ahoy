@@ -5,20 +5,21 @@
 #include "plugin.h"
 #include "web/html/h/thirdparty_html.h"
 
-class pluginapp : public app, public System
+class pluginapp : public app, public System, public settingsCb, public mqttCb, public restCb
 {
 public:
     pluginapp() : app() {}
     ~pluginapp() {}
-    void setupCB(PubMqttType *mqtt, WebType *webtype, RestApiType *restapi)
+    void setupCB(PubMqttType *mqtt, WebType *webtype, RestApiType *restapi, settings *appSettings)
     {
         DPRINTLN(DBG_INFO, F("setupCB: "));
         mMqtt = mqtt;
         mRestapi = restapi;
-        mqtt->setMessageCb(std::bind(&pluginapp::onMessage, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
-        mqtt->setOnConnectCb(std::bind(&pluginapp::onMqttConnect, this));
+        mSettings = appSettings;
+        mSettings->mSettingsCb = this;
+        mqtt->mMqttCb = this;
         webtype->getWebSrvPtr()->on("/thirdparty", HTTP_ANY, std::bind(&pluginapp::onHttp, this, std::placeholders::_1));
-        restapi->mJsonCb = std::bind(&pluginapp::onMenu, this, std::placeholders::_1, std::placeholders::_2);
+        restapi->mRestCb = this;
         Inverter<> *iv;
         for (uint8_t i = 0; i < mSys->getNumInverters(); i++)
         {
@@ -175,7 +176,15 @@ public:
         plugins.push_back(p);
     }
 
-private:
+    void onLoadSettings(DynamicJsonDocument settings)
+    {
+        DPRINT(DBG_INFO, F("onSettingsAction: load settings"));
+    }
+
+    void onSaveSettings(JsonObject settings)
+    {
+        DPRINT(DBG_INFO, F("onSettingsAction: save settings"));
+    }
 
     void onMqttConnect() {
         mMqtt->subscribe("thirdparty/#");
@@ -184,7 +193,7 @@ private:
             plugins[i]->onMqttSubscribe();
         }
     }
-    void onMessage(const char *topic, const uint8_t *payload, size_t len)
+    void onMqttMessage(const char *topic, const uint8_t *payload, size_t len)
     {
         DPRINTLN(DBG_INFO, F("onMessage: ") + String(topic));
         MqttMessage msg;
@@ -196,6 +205,13 @@ private:
             plugins[i]->mqttCallback(&msg);
         }
     }
+    void onRestMenu(JsonObject obj,uint8_t index)
+    {
+        DPRINTLN(DBG_INFO, F("onMenu"));
+        obj[F("name")][index] = "Thirdparty";
+        obj[F("link")][index++] = "/thirdparty";
+    }
+private:
     void onHttp(AsyncWebServerRequest *request)
     {
         DPRINTLN(DBG_INFO, F("onHttp"));
@@ -203,15 +219,10 @@ private:
         response->addHeader(F("Content-Encoding"), "gzip");
         request->send(response);
     }
-    void onMenu(JsonObject obj,uint8_t index)
-    {
-        DPRINTLN(DBG_INFO, F("onMenu"));
-        obj[F("name")][index] = "Thirdparty";
-        obj[F("link")][index++] = "/thirdparty";
-    }
 
     PubMqttType *mMqtt;
     RestApiType *mRestapi;
+    settings *mSettings;
     char buffer[THIRDPARTY_MSG_BUFFERSIZE];
     uint16_t bufferindex = 0;
     typedef struct

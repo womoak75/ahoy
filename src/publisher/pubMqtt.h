@@ -25,8 +25,12 @@
 #define QOS_0   0
 
 typedef std::function<void(JsonObject)> subscriptionCb;
-typedef std::function<void(void)> onConnectCb;
-typedef std::function<void(const char*, const uint8_t*, size_t)> messageCb;
+
+class mqttCb {
+    public:
+    virtual void onMqttConnect() = 0;
+    virtual void onMqttMessage(const char* topic, const uint8_t* payload, size_t len) = 0;
+};
 
 template<class HMSYSTEM>
 class PubMqtt {
@@ -36,7 +40,6 @@ class PubMqtt {
             mTxCnt = 0;
             mEnReconnect = false;
             mSubscriptionCb = NULL;
-            mMessageCb = NULL;
             mIvAvail = true;
             memset(mLastIvState, 0xff, MAX_NUM_INVERTERS);
         }
@@ -122,14 +125,6 @@ class PubMqtt {
         void subscribeThirdparty(const char *topic) {
             mClient.subscribe(topic, QOS_0);
         }
-
-        void setMessageCb(messageCb cb) {
-            mMessageCb = cb;
-        }
-
-        void setOnConnectCb(onConnectCb cb) {
-            mOnConnectCb = cb;
-        }
 #endif
         void subscribe(const char *subTopic) {
             char topic[MQTT_TOPIC_LEN + 20];
@@ -202,7 +197,7 @@ class PubMqtt {
                 }
             }
         }
-
+        mqttCb *mMqttCb = nullptr;
     private:
         #if defined(ESP8266)
         void onWifiConnect(const WiFiEventStationModeGotIP& event) {
@@ -245,8 +240,8 @@ class PubMqtt {
 
             subscribe("ctrl/#");
             subscribe("setup/#");
-            if(mOnConnectCb) {
-                (mOnConnectCb)();
+            if(nullptr != mMqttCb) {
+                mMqttCb->onMqttConnect();
             }
             //subscribe("status/#");
         }
@@ -330,8 +325,8 @@ class PubMqtt {
             DPRINTLN(DBG_INFO, "json: " + String(out));*/
             if(NULL != mSubscriptionCb)
                 (mSubscriptionCb)(root);
-            if(NULL != mMessageCb)
-                (mMessageCb)(topic,payload,len);
+            if(nullptr != mMqttCb)
+                mMqttCb->onMqttMessage(topic,payload,len);
             mRxCnt++;
         }
 
@@ -511,8 +506,6 @@ class PubMqtt {
         std::queue<uint8_t> mSendList;
         bool mEnReconnect;
         subscriptionCb mSubscriptionCb;
-        messageCb mMessageCb;
-        onConnectCb mOnConnectCb;
         bool mIvAvail; // shows if at least one inverter is available
         uint8_t mLastIvState[MAX_NUM_INVERTERS];
 

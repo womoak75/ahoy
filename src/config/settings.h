@@ -123,6 +123,13 @@ typedef struct {
     bool        valid;
 } settings_t;
 
+//typedef std::function<void(JsonObject,bool)> settingsCb;
+class settingsCb {
+    public:
+    virtual void onLoadSettings(DynamicJsonDocument settings) = 0;
+    virtual void onSaveSettings(JsonObject settings) = 0;
+};
+
 class settings {
     public:
         settings() {}
@@ -205,6 +212,9 @@ class settings {
                     jsonMqtt(root["mqtt"]);
                     jsonLed(root["led"]);
                     jsonInst(root["inst"]);
+                    if(nullptr != mSettingsCb) {
+                        mSettingsCb->onLoadSettings(root);
+                    }
                 }
                 else {
                     Serial.println(F("failed to parse json, using default config"));
@@ -232,7 +242,10 @@ class settings {
             jsonMqtt(root.createNestedObject(F("mqtt")), true);
             jsonLed(root.createNestedObject(F("led")), true);
             jsonInst(root.createNestedObject(F("inst")), true);
-
+            
+            if(nullptr != mSettingsCb) {
+                mSettingsCb->onSaveSettings(root);
+            }
             if(0 == serializeJson(root, fp)) {
                 DPRINTLN(DBG_ERROR, F("can't write settings file!"));
                 return false;
@@ -248,7 +261,7 @@ class settings {
             loadDefaults(!eraseWifi);
             return saveSettings();
         }
-
+        settingsCb *mSettingsCb = nullptr;
     private:
         void loadDefaults(bool keepWifi = false) {
             DPRINTLN(DBG_VERBOSE, F("loadDefaults"));

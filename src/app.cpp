@@ -82,7 +82,7 @@ void app::setup() {
     mPubSerial.setup(mConfig, mSys, &mTimestamp);
     every(std::bind(&PubSerialType::tick, &mPubSerial), mConfig->serial.interval);
     //everySec(std::bind(&app::tickSerial, this));
-    setupCB(&mMqtt,&mWeb,&mApi);
+    setupCB(&mMqtt,&mWeb,&mApi,&mSettings);
 }
 
 //-----------------------------------------------------------------------------
