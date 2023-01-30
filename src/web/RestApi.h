@@ -17,6 +17,7 @@
 class restCb {
     public:
     virtual void onRestMenu(JsonObject obj,uint8_t index) = 0;
+    virtual void onGetSetup(JsonObject obj) = 0;
 };
 
 template<class HMSYSTEM>
@@ -433,6 +434,9 @@ class RestApi {
             getRadio(obj.createNestedObject(F("radio")));
             getSerial(obj.createNestedObject(F("serial")));
             getStaticIp(obj.createNestedObject(F("static_ip")));
+            if(nullptr != mRestCb) {
+                mRestCb->onGetSetup(obj);
+            }
         }
 
         void getNetworks(JsonObject obj) {

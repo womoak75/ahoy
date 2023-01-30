@@ -52,7 +52,7 @@ public:
         }
         publish();
     }
-    
+
     void onInverterValue(uint8_t inverterId, uint8_t fieldId, float value)
     {
         DPRINTLN(DBG_INFO, F("onInverterValue"));
@@ -65,7 +65,8 @@ public:
             plugins[i]->inverterCallback(&message);
         }
     }
-    void ctrlRequest(Plugin *plugin, JsonObject request) {
+    void ctrlRequest(Plugin *plugin, JsonObject request)
+    {
         mRestapi->ctrlRequest(request);
     }
     /**
@@ -95,10 +96,14 @@ public:
         q.push(entry);
         return true;
     }
-    void subscribeMqtt(Plugin *plugin, char* topic, bool append) {
-        if(append) {
+    void subscribeMqtt(Plugin *plugin, char *topic, bool append)
+    {
+        if (append)
+        {
             mMqtt->subscribe(topic);
-        } else {
+        }
+        else
+        {
             mMqtt->subscribeThirdparty(topic);
         }
     }
@@ -125,11 +130,11 @@ public:
     {
         if (intvaltype == PLUGIN_TIMER_INTVAL::MINUTE)
         {
-            every(timerCb,(interval*60));
+            every(timerCb, (interval * 60));
         }
         else if (intvaltype == PLUGIN_TIMER_INTVAL::SECOND)
         {
-            every(timerCb,interval);
+            every(timerCb, interval);
         }
     }
 
@@ -178,15 +183,39 @@ public:
 
     void onLoadSettings(DynamicJsonDocument settings)
     {
-        DPRINT(DBG_INFO, F("onSettingsAction: load settings"));
+        DPRINTLN(DBG_INFO, F("onSettingsAction: load settings"));
+        if (settings.containsKey(F("thirdparty")))
+        {
+            DPRINTLN(DBG_INFO, F("onSettingsAction: thirdparty"));
+            JsonObject tpsettings = settings[F("thirdparty")];
+            for (unsigned int i = 0; i < plugins.size(); i++)
+            {
+                if (tpsettings.containsKey(plugins[i]->name))
+                {
+                    DPRINTLN(DBG_INFO, F("onSettingsAction: plugin settings"));
+                    JsonObject pluginjson = tpsettings[plugins[i]->name];
+                }
+            }
+        }
+    }
+
+    void onGetSetup(JsonObject settings) {
+        onSaveSettings(settings);
     }
 
     void onSaveSettings(JsonObject settings)
     {
-        DPRINT(DBG_INFO, F("onSettingsAction: save settings"));
+        DPRINTLN(DBG_INFO, F("onSettingsAction: save settings"));
+        JsonObject tpsettings = settings.createNestedObject(F("thirdparty"));
+        for (unsigned int i = 0; i < plugins.size(); i++)
+        {
+            JsonObject pluginjson = tpsettings.createNestedObject(plugins[i]->name);
+            pluginjson[F("id")] = plugins[i]->getId();
+        }
     }
 
-    void onMqttConnect() {
+    void onMqttConnect()
+    {
         mMqtt->subscribe("thirdparty/#");
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
@@ -205,12 +234,13 @@ public:
             plugins[i]->mqttCallback(&msg);
         }
     }
-    void onRestMenu(JsonObject obj,uint8_t index)
+    void onRestMenu(JsonObject obj, uint8_t index)
     {
         DPRINTLN(DBG_INFO, F("onMenu"));
         obj[F("name")][index] = "Thirdparty";
         obj[F("link")][index++] = "/thirdparty";
     }
+
 private:
     void onHttp(AsyncWebServerRequest *request)
     {
