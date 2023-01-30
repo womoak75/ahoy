@@ -5,7 +5,7 @@
 #include "plugin.h"
 #include "web/html/h/thirdparty_html.h"
 
-class pluginapp : public app, public System, public settingsCb, public mqttCb, public restCb
+class pluginapp : public app, public System, public settingsCb, public mqttCb, public restCb, public inverterCb
 {
 public:
     pluginapp() : app() {}
@@ -26,7 +26,7 @@ public:
             iv = mSys->getInverterByPos(i, false);
             if (NULL != iv)
             {
-                iv->mInverterCb = (std::bind(&pluginapp::inverterCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+                iv->mInverterCb = this;
             }
         }
     }
@@ -53,9 +53,9 @@ public:
         publish();
     }
     
-    void inverterCallback(uint8_t inverterId, uint8_t fieldId, float value)
+    void onInverterValue(uint8_t inverterId, uint8_t fieldId, float value)
     {
-        DPRINTLN(DBG_INFO, F("inverterCallback"));
+        DPRINTLN(DBG_INFO, F("onInverterValue"));
         InverterMessage message;
         message.inverterId = inverterId;
         message.fieldId = fieldId;
