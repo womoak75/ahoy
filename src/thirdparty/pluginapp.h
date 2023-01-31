@@ -26,7 +26,8 @@ public:
             JsonObject jsonObj = json.as<JsonObject>();
             loadThirdpartySettings(jsonObj[F("thirdparty")]);
             triggerSave();
-            request->send(200);
+            // :)
+            request->send(200,F("application/json"),F("{}"));
         }));
         restapi->mRestCb = this;
         Inverter<> *iv;

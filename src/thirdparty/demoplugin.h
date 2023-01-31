@@ -41,12 +41,21 @@ public:
     }
     void saveSettings(JsonObject settings) {
         settings[F("booleansetting")]=booleansetting;
+        settings[F("floatsetting")]=floatsetting;
+        settings[F("stringsetting")]=stringsetting;
     }
     void loadSettings(JsonObject settings) {
-        booleansetting=settings[F("booleansetting")];
+        if(settings.containsKey(F("booleansetting")))
+            booleansetting=settings[F("booleansetting")];
+        if(settings.containsKey(F("floatsetting")))
+            floatsetting=settings[F("floatsetting")];
+        if(settings.containsKey(F("stringsetting")))
+            settings[F("stringsetting")].as<String>().toCharArray(stringsetting,sizeof(stringsetting));
     }
     private:
     bool booleansetting = false;
+    float floatsetting = 23.0;
+    char stringsetting[32] = "some default string";
 };
 
 #endif /*__DEMOPLUGIN_H__*/
