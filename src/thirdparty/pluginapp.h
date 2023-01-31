@@ -10,15 +10,24 @@ class pluginapp : public app, public System, public settingsCb, public mqttCb, p
 public:
     pluginapp() : app() {}
     ~pluginapp() {}
-    void setupCB(PubMqttType *mqtt, WebType *webtype, RestApiType *restapi, settings *appSettings)
+    void setupSettings(settings* appSettings) {
+        mSettings = appSettings;
+        mSettings->mSettingsCb = this;
+    }
+    void setupCB(PubMqttType *mqtt, WebType *webtype, RestApiType *restapi)
     {
         DPRINTLN(DBG_INFO, F("setupCB: "));
         mMqtt = mqtt;
         mRestapi = restapi;
-        mSettings = appSettings;
-        mSettings->mSettingsCb = this;
         mqtt->mMqttCb = this;
         webtype->getWebSrvPtr()->on("/thirdparty", HTTP_ANY, std::bind(&pluginapp::onHttp, this, std::placeholders::_1));
+        webtype->getWebSrvPtr()->on("/thirdpartysetup", HTTP_GET,std::bind(&pluginapp::onThirdpartySetup, this, std::placeholders::_1));
+        webtype->getWebSrvPtr()->addHandler(new AsyncCallbackJsonWebHandler("/thirdpartysave", [this](AsyncWebServerRequest *request, JsonVariant &json) {
+            JsonObject jsonObj = json.as<JsonObject>();
+            loadThirdpartySettings(jsonObj[F("thirdparty")]);
+            triggerSave();
+            request->send(200);
+        }));
         restapi->mRestCb = this;
         Inverter<> *iv;
         for (uint8_t i = 0; i < mSys->getNumInverters(); i++)
@@ -51,6 +60,18 @@ public:
             plugins[i]->loop();
         }
         publish();
+        if(saveTpSettings) {
+            saveTpSettings = false;
+            mSettings->saveSettings();
+        }
+    }
+
+    void onThirdpartySetup(AsyncWebServerRequest *request) {
+            AsyncJsonResponse* response = new AsyncJsonResponse(false, 4096);
+            JsonObject root = response->getRoot();
+            onSaveSettings(root);
+            response->setLength();
+            request->send(response);
     }
 
     void onInverterValue(uint8_t inverterId, uint8_t fieldId, float value)
@@ -186,17 +207,23 @@ public:
         DPRINTLN(DBG_INFO, F("onSettingsAction: load settings"));
         if (settings.containsKey(F("thirdparty")))
         {
-            DPRINTLN(DBG_INFO, F("onSettingsAction: thirdparty"));
-            JsonObject tpsettings = settings[F("thirdparty")];
+            loadThirdpartySettings(settings[F("thirdparty")]);
+        }
+    }
+
+    void loadThirdpartySettings(JsonObject tpsettings) {
+            DPRINTLN(DBG_INFO, F("loadThirdpartySettings"));
             for (unsigned int i = 0; i < plugins.size(); i++)
             {
                 if (tpsettings.containsKey(plugins[i]->name))
                 {
-                    DPRINTLN(DBG_INFO, F("onSettingsAction: plugin settings"));
-                    JsonObject pluginjson = tpsettings[plugins[i]->name];
+                    plugins[i]->loadSettings(tpsettings[plugins[i]->name]);
                 }
             }
-        }
+    }
+
+    void triggerSave() {
+        saveTpSettings = true;
     }
 
     void onGetSetup(JsonObject settings) {
@@ -210,7 +237,8 @@ public:
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
             JsonObject pluginjson = tpsettings.createNestedObject(plugins[i]->name);
-            pluginjson[F("id")] = plugins[i]->getId();
+            //pluginjson[F("id")] = plugins[i]->getId();
+            plugins[i]->saveSettings(pluginjson);
         }
     }
 
@@ -253,6 +281,7 @@ private:
     PubMqttType *mMqtt;
     RestApiType *mRestapi;
     settings *mSettings;
+    bool saveTpSettings = false;
     char buffer[THIRDPARTY_MSG_BUFFERSIZE];
     uint16_t bufferindex = 0;
     typedef struct

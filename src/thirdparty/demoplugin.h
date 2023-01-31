@@ -39,6 +39,14 @@ public:
     {
         DPRINTLN(DBG_INFO, F("demoplugin.internalCallback: ") + String(message->valuename) + String(" = ") + String(message->value));
     }
+    void saveSettings(JsonObject settings) {
+        settings[F("booleansetting")]=booleansetting;
+    }
+    void loadSettings(JsonObject settings) {
+        booleansetting=settings[F("booleansetting")];
+    }
+    private:
+    bool booleansetting = false;
 };
 
 #endif /*__DEMOPLUGIN_H__*/

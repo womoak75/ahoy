@@ -112,7 +112,8 @@ public:
     virtual void internalCallback(const PluginMessage *message) {}
 
     virtual void onMqttSubscribe() {}
-
+    virtual void loadSettings(JsonObject settings) {}
+    virtual void saveSettings(JsonObject settings) {}
     void subscribeMqtt(char *topic, bool append)
     {
         if (system)

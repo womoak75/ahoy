@@ -64,7 +64,8 @@ class app : public IApp, public ah::Scheduler {
         void saveValues(void);
         void resetPayload(Inverter<>* iv);
         bool getWifiApActive(void);
-        virtual void setupCB(PubMqttType* mqtt, WebType* webtype, RestApiType* restapi, settings* appsettings) = 0;
+        virtual void setupSettings(settings* appsettings) = 0;
+        virtual void setupCB(PubMqttType* mqtt, WebType* webtype, RestApiType* restapi) = 0;
 
         uint32_t getUptime() {
             return Scheduler::getUptime();

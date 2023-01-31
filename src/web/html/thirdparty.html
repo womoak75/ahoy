@@ -19,6 +19,9 @@
         <div id="wrapper">
             <div id="content">
                 Default Thirdparty site
+                <form id="formcontent" method="post" action="/thirdpartysave">
+                <input type="button" value="save" class="btn right" onclick="thirdpartysave()"/>
+                </form>
             </div>
         </div>
         <div id="footer">
@@ -35,14 +38,75 @@
             </div>
         </div>
         <script type="text/javascript">
+            var mRoot;
             function parseM(root) {
                 parseMenu(root);
             }
             function parseTp(root) {
                 console.log('parseTp: '+JSON.stringify(root));
             }
+            function loadPluginConfig(name,plugin) {
+                var contentelement = document.getElementById('formcontent');
+                var pluginelement = document.createElement('fieldset');
+                pluginelement.setAttribute('name',name);
+                var legende = document.createElement('legend');
+                legende.setAttribute('class','des');
+                legende.appendChild(document.createTextNode(name));
+                pluginelement.appendChild(legende);
+                for (const [key, value] of Object.entries(plugin)) {
+                    var label = document.createElement('label');
+                    label.setAttribute('for',key);
+                    label.appendChild(document.createTextNode(key));
+                    pluginelement.appendChild(label);
+                    var n;
+                    if(value === false || value === true) {
+                        n = document.createElement('input');
+                        n.setAttribute('type','checkbox');
+                        n.setAttribute('class','cb');
+                        n.checked=value;
+                        n.addEventListener('change', function(e) {
+                            mRoot.thirdparty[''+name][''+key]=e.target.checked;
+                        });
+                    } else if(!isNaN(value)) {
+                        n = document.createElement('input');
+                        n.setAttribute('type','text');
+                        n.setAttribute('class','text');
+                        n.addEventListener('input', function(e) {
+                            mRoot.thirdparty[''+name][''+key]=e.target.value;
+                        });
+                    } else {
+                        // string
+                        n = document.createElement('input');
+                        n.setAttribute('type','text');
+                        n.setAttribute('class','text');
+                        n.addEventListener('input', function() {
+                            mRoot.thirdparty[''+name][''+key]=this.value;
+                        });
+                    }
+                    n.setAttribute('name',key);
+                    n.setAttribute('id',key+'id')
+                    n.setAttribute('value',value);
+                    pluginelement.appendChild(n);
+                }
+                contentelement.appendChild(pluginelement);
+            }
+            function loadPluginsConfig(plugins) {
+                for (const [key, value] of Object.entries(plugins)) {
+                    loadPluginConfig(key,value);
+                }
+            }
+            function setupCb(root) {
+                mRoot = root;
+                loadPluginsConfig(root.thirdparty);
+            }
+            function saveCb(resp) {
+                console.log(resp);
+            }
+            function thirdpartysave() {
+                getAjax("/thirdpartysave", saveCb, "POST", JSON.stringify(mRoot));
+            }
             getAjax("/api/menu", parseM);
-            getAjax("/api/thirdparty", parseTp);
+            getAjax("/thirdpartysetup", setupCb);
         </script>
     </body>
 </html>

@@ -26,6 +26,7 @@ void app::setup() {
 
     resetSystem();
 
+    setupSettings(&mSettings);
     mSettings.setup();
     mSettings.getPtr(mConfig);
     DPRINTLN(DBG_INFO, F("Settings valid: ") + String((mSettings.getValid()) ? F("true") : F("false")));
@@ -82,7 +83,7 @@ void app::setup() {
     mPubSerial.setup(mConfig, mSys, &mTimestamp);
     every(std::bind(&PubSerialType::tick, &mPubSerial), mConfig->serial.interval);
     //everySec(std::bind(&app::tickSerial, this));
-    setupCB(&mMqtt,&mWeb,&mApi,&mSettings);
+    setupCB(&mMqtt,&mWeb,&mApi);
 }
 
 //-----------------------------------------------------------------------------
