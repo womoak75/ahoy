@@ -14,8 +14,17 @@ public:
 class InverterMessage
 {
 public:
+     /**
+     * invererId - id of inverter ( 0 - (MAX_NUM_INVERTERS-1) )
+     */
     uint8_t inverterId;
+    /**
+     *  fieldId - see hmDefines.h => field types
+     */
     uint8_t fieldId;
+    /**
+    *value - value transmited by inverter
+    */
     float value;
 };
 
@@ -85,9 +94,7 @@ public:
      *
      * will be called at end of Inverter.addValue(...)
      *
-     *  @param invererId - id of inverter ( 0 - (MAX_NUM_INVERTERS-1) )
-     *  @param fieldId - see hmDefines.h => field types
-     *  @param value - value transmited by inverter
+     *  @param InverterMessage
      */
     virtual void inverterCallback(const InverterMessage *message) {}
     /**
@@ -95,9 +102,7 @@ public:
      *
      * will be called at end of app::cbMqtt
      *
-     *  @param topic - topic for which data was receiced (e.g. 'inverter/thirdparty/cmd')
-     *  @param payload - byte* for received data
-     *  @param length - length of payload
+     *  @param MqttMessage
      */
     virtual void mqttCallback(const MqttMessage *message) {}
     /**
@@ -105,16 +110,46 @@ public:
      *
      * will be called from 'system'
      *
-     *  @param topic - topic for which data was receiced (e.g. 'powercontroller/power/limit')
-     *  @param payload - byte* for received data
-     *  @param length - length of payload
+     *  @param PluginMessage
      */
     virtual void internalCallback(const PluginMessage *message) {}
-
+    /**
+     * called when json message was posted to /thirdpartyplugins.
+     * message must contain either 'pluginid' or 'pluginname'.
+     * 
+     * e.g.
+     * 
+     * {"pluginname":"someplugin","paramname","paramvalue"}
+     * 
+     *  @param request - JsonObject
+     *  @param respone - JsonObject
+     *  @return true if request was handled - false otherwise
+     */
     virtual bool onRequest(JsonObject request, JsonObject response) { return false; }
+    /**
+     * called when mqtt was connected/reconnected 
+     * subscribe your topics here! :)
+     */
     virtual void onMqttSubscribe() {}
+    /**
+     * called at startup
+     * 
+     * @param settings - jsonobject with plugin config
+     */
     virtual void loadSettings(JsonObject settings) {}
+    /**
+     * called when settings are saved
+     * 
+     * @param settings - jsonobject for plugin config
+     */
     virtual void saveSettings(JsonObject settings) {}
+    /**
+     * subscribe mqtt topic. 
+     * use: onMqttSubscribe()
+     * 
+     * @param topic
+     * @param append - true if topic should be appended to DEFAULT TOPIC PREFIX - false otherwise
+     */
     void subscribeMqtt(char *topic, bool append)
     {
         if (system)
@@ -122,7 +157,11 @@ public:
             system->subscribeMqtt(this, topic, append);
         }
     }
-
+    /**
+     * @brief send control request 
+     * 
+     * @param request - json request see RestApi.h setCtrl() for content details
+     */
     void sendCtrlRequest(JsonObject request)
     {
         if (system)
@@ -130,7 +169,15 @@ public:
             system->ctrlRequest(this, request);
         }
     }
-
+    /**
+     * @brief enqueue mqtt message
+     * 
+     * @param topic - mqtt topic
+     * @param data - data to be send
+     * @param append - true if topic should be appended to DEFAULT MQTT TOPIC, false otherwise
+     * @return true 
+     * @return true if message was queued successful - false otherwise 
+     */
     bool enqueueMessage(char *topic, char *data, bool append)
     {
         if (system)
@@ -139,7 +186,12 @@ public:
         }
         return false;
     }
-
+    /**
+     * @brief publish internal message to all plugins
+     * 
+     * @param valueid - value identifier
+     * @param value
+     */
     void publishInternalValue(const char *valueid, float value)
     {
         if (system)
@@ -151,7 +203,13 @@ public:
             system->publishInternal(this, &message);
         }
     }
-
+    /**
+     * @brief add timer callback.
+     * 
+     * @param intvaltype - MINUTE / SECOND
+     * @param interval
+     * @param timerCb - callback function
+     */
     void addTimerCb(PLUGIN_TIMER_INTVAL intvaltype, uint32_t interval, std::function<void(void)> timerCb)
     {
         if (system)
