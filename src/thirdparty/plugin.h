@@ -111,6 +111,7 @@ public:
      */
     virtual void internalCallback(const PluginMessage *message) {}
 
+    virtual bool onRequest(JsonObject request, JsonObject response) { return false; }
     virtual void onMqttSubscribe() {}
     virtual void loadSettings(JsonObject settings) {}
     virtual void saveSettings(JsonObject settings) {}

@@ -29,6 +29,14 @@ public:
             // :)
             request->send(200,F("application/json"),F("{}"));
         }));
+        webtype->getWebSrvPtr()->addHandler(new AsyncCallbackJsonWebHandler("/thirdpartyplugins", [this](AsyncWebServerRequest *request, JsonVariant &json) {
+            JsonObject requestObj = json.as<JsonObject>();
+            AsyncJsonResponse * response = new AsyncJsonResponse();
+            JsonObject responseObj = response->getRoot();
+            responseObj[F("ok")]=onThirdpartyPlugin(requestObj,responseObj);
+            response->setLength();
+            request->send(response);
+        }));
         restapi->mRestCb = this;
         Inverter<> *iv;
         for (uint8_t i = 0; i < mSys->getNumInverters(); i++)
@@ -65,6 +73,27 @@ public:
             saveTpSettings = false;
             mSettings->saveSettings();
         }
+    }
+
+    boolean onThirdpartyPlugin(JsonObject request, JsonObject response) {
+        if(request.containsKey(F("pluginid"))) {
+            int id = request[F("pluginid")];
+            for (unsigned int i = 0; i < plugins.size(); i++)
+            {
+                if(plugins[i]->getId()==id) {
+                    return plugins[i]->onRequest(request,response);
+                }
+            }
+        } else if(request.containsKey(F("pluginname"))) {
+            String name = request[F("pluginname")].as<String>();
+            for (unsigned int i = 0; i < plugins.size(); i++)
+            {
+                if(strcmp(name.c_str(),plugins[i]->name)==0) {
+                    return plugins[i]->onRequest(request,response);
+                }
+            }
+        }
+        return false;
     }
 
     void onThirdpartySetup(AsyncWebServerRequest *request) {

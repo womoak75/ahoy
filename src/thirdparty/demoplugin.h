@@ -39,6 +39,11 @@ public:
     {
         DPRINTLN(DBG_INFO, F("demoplugin.internalCallback: ") + String(message->valuename) + String(" = ") + String(message->value));
     }
+    bool onRequest(JsonObject request, JsonObject response) { 
+        response[F("someoutput")]=millis();
+        return true; 
+    }
+
     void saveSettings(JsonObject settings) {
         settings[F("booleansetting")]=booleansetting;
         settings[F("floatsetting")]=floatsetting;
