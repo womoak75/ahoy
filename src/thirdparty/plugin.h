@@ -119,7 +119,7 @@ public:
      * 
      * e.g.
      * 
-     * {"pluginname":"someplugin","paramname","paramvalue"}
+     * {"pluginname":"someplugin","paramname":"paramvalue"}
      * 
      *  @param request - JsonObject
      *  @param respone - JsonObject
@@ -132,7 +132,7 @@ public:
      */
     virtual void onMqttSubscribe() {}
     /**
-     * called at startup
+     * @brief called when settings are loaded
      * 
      * @param settings - jsonobject with plugin config
      */
@@ -174,11 +174,10 @@ public:
      * 
      * @param topic - mqtt topic
      * @param data - data to be send
-     * @param append - true if topic should be appended to DEFAULT MQTT TOPIC, false otherwise
-     * @return true 
+     * @param append - true: {DEFAULT MQTT TOPIC}/{pluginname}/{topic}, false: {topic}
      * @return true if message was queued successful - false otherwise 
      */
-    bool enqueueMessage(char *topic, char *data, bool append)
+    bool enqueueMessage(char *topic, char *data, bool append = true)
     {
         if (system)
         {
@@ -218,9 +217,6 @@ public:
         }
     }
     const char *name;
-
-protected:
-    System *getSystem() { return system; }
 
 private:
     int id;

@@ -168,7 +168,11 @@ public:
             auto sender = getPluginById(entry.pluginid);
             if (NULL != sender)
             {
-                snprintf(topic, sizeof(topic), "%s/%s", sender->name, (const char *)buffer + entry.topicindex);
+                if(entry.appendtopic) {
+                    snprintf(topic, sizeof(topic), "%s/%s", sender->name, (const char *)buffer + entry.topicindex);
+                } else {
+                   snprintf(topic, sizeof(topic), "%s", (const char *)buffer + entry.topicindex);
+                }
                 mMqtt->publish(topic, (const char *)buffer + entry.dataindex, false, entry.appendtopic);
             }
             q.pop();

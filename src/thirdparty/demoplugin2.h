@@ -15,7 +15,7 @@ public:
         });
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"hello world!",false);
-            enqueueMessage((char*)"out",(char*)"ahoi world!",true); 
+            enqueueMessage((char*)"out",(char*)"ahoi world!"); 
         });
     }
     void onMqttSubscribe() {
