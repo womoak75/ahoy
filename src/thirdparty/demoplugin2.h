@@ -11,7 +11,7 @@ public:
 
     void setup() {
         addTimerCb(SECOND,7,[this](){
-            publishInternalValue("SOMEOTHERPLUGINOUTPUT",23);
+            publishInternalBoolValue("SOMEOTHERPLUGINOUTPUT",(millis()%2==0)?true:false);
         });
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"hello world!",false);
@@ -37,7 +37,12 @@ public:
 
      void internalCallback(const PluginMessage *message) {
          // internal topic: '{pluginname}/{dataidentifier}'
-        DPRINTLN(DBG_INFO, F("demoplugin2.internalCallback: ")+String(message->valuename)+String(" = ")+String(message->value));
+       if(message->isFloatValue())
+            DPRINTLN(DBG_INFO,F("demoplugin2.internalCallback: ")+String("Float: ")+String(message->getFloatValue()));
+        if(message->isCharValue())
+            DPRINTLN(DBG_INFO,F("demoplugin2.internalCallback: ")+String("Char: ")+String(message->getCharValue()));
+        if(message->isBoolValue())
+            DPRINTLN(DBG_INFO,F("demoplugin2.internalCallback: ")+String("Bool: ")+String(message->getBoolValue()));
      }
      MqttMessage mqttMsg;
 };

@@ -11,7 +11,8 @@ public:
     void setup()
     {
         addTimerCb(SECOND, 3, [this]() { 
-            publishInternalValue("SOMEPLUGINOUTPUT", 42); 
+            publishInternalValue("SOMEPLUGINOUTPUT", 42);
+            publishInternalCharValue("SOMEPLUGINOUTPUTCHAR", "blah blub");            
         });
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"ahoi world!",false);
@@ -37,8 +38,14 @@ public:
 
     void internalCallback(const PluginMessage *message)
     {
-        DPRINTLN(DBG_INFO, F("demoplugin.internalCallback: ") + String(message->valuename) + String(" = ") + String(message->value));
+        if(message->isFloatValue())
+            DPRINTLN(DBG_INFO,F("demoplugin.internalCallback: ")+String("Float: ")+String(message->getFloatValue()));
+        if(message->isCharValue())
+            DPRINTLN(DBG_INFO,F("demoplugin.internalCallback: ")+String("Char: ")+String(message->getCharValue()));
+        if(message->isBoolValue())
+            DPRINTLN(DBG_INFO,F("demoplugin.internalCallback: ")+String("Bool: ")+String(message->getBoolValue()));
     }
+
     bool onRequest(JsonObject request, JsonObject response) { 
         response[F("someoutput")]=millis();
         return true; 

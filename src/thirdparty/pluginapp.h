@@ -195,7 +195,6 @@ public:
 
     void publishInternal(Plugin *plugin, PluginMessage *message)
     {
-        message->pluginid = plugin->getId();
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
             if (plugins[i]->getId() != plugin->getId())

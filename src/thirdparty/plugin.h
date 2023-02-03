@@ -1,14 +1,62 @@
 #ifndef __PLUGIN_H__
 #define __PLUGIN_H__
+typedef enum {
+    BOOL,
+    FLOAT,
+    CHAR
+} ValueType;
+typedef struct {
+    bool value;
+} BoolMsg;
+typedef struct {
+    float value;
+} FloatMsg;
+typedef struct {
+    const char* value;
+} CharMsg;
+typedef union {
+    FloatMsg floatmsg;
+    BoolMsg boolmsg;
+    CharMsg charmsg;
+} DataValue;
+typedef struct {
+    int pluginid;
+    const char* valuename;
+    ValueType valuetype;
+    DataValue content;
+} DataMsg;
 
 class PluginMessage
 {
 public:
-    const float truefloat = 1.0;
-    const float falsefloat = 0.0;
-    int pluginid = 0;
-    const char *valuename = NULL;
-    float value = 0;
+    PluginMessage(int id, const char *vname, float v) {
+        data.pluginid = id;
+        data.valuename = vname;
+        data.valuetype = ValueType::FLOAT;
+        data.content.floatmsg.value = v;
+    }
+    PluginMessage(int id, const char *vname, bool v) {
+        data.pluginid = id;
+        data.valuename = vname;
+        data.valuetype = ValueType::BOOL;
+        data.content.boolmsg.value = v;
+    }
+    PluginMessage(int id, const char *vname, const char* v) {
+        data.pluginid = id;
+        data.valuename = vname;
+        data.valuetype = ValueType::CHAR;
+        data.content.charmsg.value = v;
+    }
+    bool isBoolValue() const { return (data.valuetype==ValueType::BOOL);}
+    bool isFloatValue() const{ return (data.valuetype==ValueType::FLOAT);}
+    bool isCharValue() const{ return (data.valuetype==ValueType::CHAR);}
+    float getFloatValue() const{ return data.content.floatmsg.value; }
+    bool getBoolValue() const{ return data.content.boolmsg.value; }
+    const char* getCharValue() const{ return data.content.charmsg.value; }
+    int getPluginId() const{ return data.pluginid;}
+    const char* getValueId() const{ return data.valuename;}
+    private:
+        DataMsg data;
 };
 
 class InverterMessage
@@ -195,10 +243,35 @@ public:
     {
         if (system)
         {
-            PluginMessage message;
-            message.pluginid = this->getId();
-            message.valuename = valueid;
-            message.value = value;
+            PluginMessage message(this->getId(),valueid,value);
+            system->publishInternal(this, &message);
+        }
+    }
+    /**
+     * @brief publish internal message to all plugins
+     * 
+     * @param valueid - value identifier
+     * @param value - bool
+     */
+    void publishInternalBoolValue(const char *valueid, bool value)
+    {
+        if (system)
+        {
+            PluginMessage message(this->getId(),valueid,value);
+            system->publishInternal(this, &message);
+        }
+    }
+    /**
+     * @brief publish internal message to all plugins
+     * 
+     * @param valueid - value identifier
+     * @param value - char*
+     */
+    void publishInternalCharValue(const char *valueid, const char* value)
+    {
+        if (system)
+        {
+            PluginMessage message(this->getId(),valueid,value);
             system->publishInternal(this, &message);
         }
     }
