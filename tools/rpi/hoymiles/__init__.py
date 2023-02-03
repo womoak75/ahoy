@@ -11,8 +11,20 @@ import re
 from datetime import datetime
 import logging
 import crcmod
-from RF24 import RF24, RF24_PA_MIN, RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX, RF24_250KBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
 from .decoders import *
+
+try:
+  # OSI Layer 2 driver for nRF24L01 on Arduino & Raspberry Pi/Linux Devices
+  # https://github.com/nRF24/RF24.git
+  from RF24 import RF24, RF24_PA_MIN, RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX, RF24_250KBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
+except ModuleNotFoundError:
+  try:
+    # Repo for pyRF24 package
+    # https://github.com/nRF24/pyRF24.git
+    from pyrf24 import RF24, RF24_PA_MIN, RF24_PA_LOW, RF24_PA_HIGH, RF24_PA_MAX, RF24_250KBPS, RF24_CRC_DISABLED, RF24_CRC_8, RF24_CRC_16
+  except ModuleNotFoundError:
+    print("Module for RF24 not found - exit")
+    exit()
 
 f_crc_m = crcmod.predefined.mkPredefinedCrcFun('modbus')
 f_crc8 = crcmod.mkCrcFun(0x101, initCrc=0, xorOut=0)
@@ -158,15 +170,15 @@ class ResponseDecoder(ResponseDecoderFactory):
         model = self.inverter_model
         command = self.request_command
 
-        c_datetime = self.time_rx.strftime("%Y-%m-%d %H:%M:%S.%f")
-        logging.info(f'{c_datetime} model_decoder: {model}Decode{command.upper()}')
+        if HOYMILES_DEBUG_LOGGING:
+            c_datetime = self.time_rx.strftime("%Y-%m-%d %H:%M:%S.%f")
+            logging.info(f'{c_datetime} model_decoder: {model}Decode{command.upper()}')
 
         model_decoders = __import__('hoymiles.decoders')
         if hasattr(model_decoders, f'{model}Decode{command.upper()}'):
             device = getattr(model_decoders, f'{model}Decode{command.upper()}')
         else:
-            if HOYMILES_DEBUG_LOGGING:
-                device = getattr(model_decoders, 'DebugDecodeAny')
+            device = getattr(model_decoders, 'DebugDecodeAny')
 
         return device(self.response,
                 time_rx=self.time_rx,
