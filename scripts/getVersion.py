@@ -2,6 +2,7 @@ import os
 import shutil
 import gzip
 from datetime import date
+import subprocess
 
 def genOtaBin(path):
     arr = []
@@ -40,7 +41,7 @@ def readVersion(path, infile):
     today = date.today()
     search = ["_MAJOR", "_MINOR", "_PATCH"]
     version = today.strftime("%y%m%d") + "_ahoy_"
-    versionnumber = "ahoy_v"
+    versionnumber = getForkVersionPrefix + "ahoy_v"
     for line in lines:
         if(line.find("VERSION_") != -1):
             for s in search:
@@ -97,6 +98,15 @@ def readVersion(path, infile):
     os.rename("../scripts/gh-action-dev-build-flash.html", path + "install.html")
 
     print("name=" + versionnumber[:-1] )
-    
+
+def getForkVersionPrefix():
+    result = subprocess.run(['git','config','--get','remote.origin.url'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,text=True)
+    print(result.returncode, result.stdout, result.stderr)
+    gituser = result.stdout.split(":")[1].split("/")[0]
+    print(gituser)
+    if gituser=="lumapu":
+        return ""
+    else:
+        return gituser+"_"
     
 readVersion("", "defines.h")
