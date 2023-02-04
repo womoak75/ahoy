@@ -41,7 +41,7 @@ def readVersion(path, infile):
     today = date.today()
     search = ["_MAJOR", "_MINOR", "_PATCH"]
     version = today.strftime("%y%m%d") + "_ahoy_"
-    versionnumber = getForkVersionPrefix + "ahoy_v"
+    versionnumber = getForkVersionPrefix() + "ahoy_v"
     for line in lines:
         if(line.find("VERSION_") != -1):
             for s in search:
