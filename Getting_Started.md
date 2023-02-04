@@ -22,6 +22,7 @@
     - [Connect to the Ahoy DTU Webinterface using your Browser](#connect-to-the-ahoy-dtu-webinterface-using-your-browser)
       - [HTTP based Pages](#http-based-pages)
 - [MQTT command to set the DTU without webinterface](#mqtt-command-to-set-the-dtu-without-webinterface)
+- [Add custom plugin](#add-custom-plugin)
 - [Used Libraries](#used-libraries)
 - [Contact](#contact)
 - [ToDo](#todo)
@@ -237,6 +238,126 @@ When everything is wired up and the firmware is flashed, it is time to connect t
 ## MQTT command to set the DTU without webinterface
 
 [Read here](User_Manual.md)
+
+## Add custom plugin
+
+Enable THIRDPARTY in config/config_override.h
+
+```
+
+#ifndef __CONFIG_OVERRIDE_H__
+#define __CONFIG_OVERRIDE_H__
+
+...
+
+// enable callbacks / code for thirdparty app
+#define THIRDPARTY
+
+#endif /*__CONFIG_OVERRIDE_H__*/
+
+```
+
+Add a headerfile 'thirdparty/mycustomcode.h'
+and extend your custom code class from 'plugin'
+
+```cpp
+#ifndef __MYCUSTOMCODE_H__
+#define __MYCUSTOMCODE_H__
+
+#include "plugin.h"
+
+enum myCustomCodeIds {CUSTOMCODEIDX,CUSTOMCODEIDY};
+
+class MyCustomCode : public plugin
+{
+public:
+    MyCustomCode() : Plugin(23,"mycustomcode") {}
+    
+    void setup() {
+        addTimerCb(SECOND,30,[this](){
+          // do some stuff every 30 sec.
+            publishInternalBoolValue(CUSTOMCODEIDX,42);
+        });
+    }
+
+    void onMqttSubscribe() {
+        // subscribe for some topic to receive input
+        subscribeMqtt((char*)"external/topic",false);
+    }
+    void loop() {
+        // main loop
+     }
+     void inverterCallback(const InverterMessage *message) {
+        // receice inverter data
+     }
+     void mqttCallback(const MqttMessage *message) {
+         // receive data from mqtt
+      }
+
+     void internalCallback(const PluginMessage *message) {
+         // reiceive data from other plugins ... if there are some :)
+        char buffer[64];
+        if(message->isBoolValue())
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%d",message->getPluginId(),message->getValueId(),message->getBoolValue());
+        else if(message->isFloatValue())
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%f",message->getPluginId(),message->getValueId(),message->getFloatValue());
+        else
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%s",message->getPluginId(),message->getValueId(),message->getCharValue());
+        DPRINTLN(DBG_INFO,buffer);
+     }
+};
+
+#endif /*__MYCUSTOMCODE_H__*/
+```
+
+and add to main.cpp
+
+```cpp
+//-----------------------------------------------------------------------------
+// 2022 Ahoy, https://www.mikrocontroller.net/topic/525778
+// Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
+//-----------------------------------------------------------------------------
+
+#include "utils/dbg.h"
+#include "app.h"
+#include "config/config.h"
+#ifdef THIRDPARTY
+#include "thirdparty/plugin.h"
+#include "thirdparty/mycustomcode.h"
+#endif
+
+#ifdef THIRDPARTY
+pluginapp myApp;
+MyCustomCode myplugin = MyCustomCode();
+#else
+app myApp;
+#endif
+
+//-----------------------------------------------------------------------------
+IRAM_ATTR void handleIntr(void) {
+    myApp.handleIntr();
+}
+
+
+//-----------------------------------------------------------------------------
+void setup() {
+    #ifdef THIRDPARTY
+    myApp.addPlugin(&myplugin);
+    #endif
+    myApp.setup();
+
+
+    // TODO: move to HmRadio
+    attachInterrupt(digitalPinToInterrupt(myApp.getIrqPin()), handleIntr, FALLING);
+}
+
+
+//-----------------------------------------------------------------------------
+void loop() {
+    myApp.loop();
+}
+
+```
 
 ## Used Libraries
 
