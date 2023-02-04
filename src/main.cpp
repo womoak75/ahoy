@@ -14,8 +14,8 @@
 
 #ifdef THIRDPARTY
 pluginapp myApp;
-demoPlugin plugin1 = demoPlugin(1, "demoplugin");
-demoPlugin2 plugin2 = demoPlugin2(2, "demoplugin2");
+demoPlugin plugin1 = demoPlugin();
+demoPlugin2 plugin2 = demoPlugin2();
 #else
 app myApp;
 #endif

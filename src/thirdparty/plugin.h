@@ -1,5 +1,6 @@
 #ifndef __PLUGIN_H__
 #define __PLUGIN_H__
+
 typedef enum {
     BOOL,
     FLOAT,
@@ -21,7 +22,7 @@ typedef union {
 } DataValue;
 typedef struct {
     int pluginid;
-    const char* valuename;
+    int valueid;
     ValueType valuetype;
     DataValue content;
 } DataMsg;
@@ -29,21 +30,21 @@ typedef struct {
 class PluginMessage
 {
 public:
-    PluginMessage(int id, const char *vname, float v) {
+    PluginMessage(int id, int valueid, float v) {
         data.pluginid = id;
-        data.valuename = vname;
+        data.valueid = valueid;
         data.valuetype = ValueType::FLOAT;
         data.content.floatmsg.value = v;
     }
-    PluginMessage(int id, const char *vname, bool v) {
+    PluginMessage(int id, int valueid, bool v) {
         data.pluginid = id;
-        data.valuename = vname;
+        data.valueid = valueid;
         data.valuetype = ValueType::BOOL;
         data.content.boolmsg.value = v;
     }
-    PluginMessage(int id, const char *vname, const char* v) {
+    PluginMessage(int id, int valueid, const char* v) {
         data.pluginid = id;
-        data.valuename = vname;
+        data.valueid = valueid;
         data.valuetype = ValueType::CHAR;
         data.content.charmsg.value = v;
     }
@@ -54,7 +55,7 @@ public:
     bool getBoolValue() const{ return data.content.boolmsg.value; }
     const char* getCharValue() const{ return data.content.charmsg.value; }
     int getPluginId() const{ return data.pluginid;}
-    const char* getValueId() const{ return data.valuename;}
+    const int getValueId() const{ return data.valueid;}
     private:
         DataMsg data;
 };
@@ -239,7 +240,7 @@ public:
      * @param valueid - value identifier
      * @param value
      */
-    void publishInternalValue(const char *valueid, float value)
+    void publishInternalValue(int valueid, float value)
     {
         if (system)
         {
@@ -253,7 +254,7 @@ public:
      * @param valueid - value identifier
      * @param value - bool
      */
-    void publishInternalBoolValue(const char *valueid, bool value)
+    void publishInternalBoolValue(int valueid, bool value)
     {
         if (system)
         {
@@ -267,7 +268,7 @@ public:
      * @param valueid - value identifier
      * @param value - char*
      */
-    void publishInternalCharValue(const char *valueid, const char* value)
+    void publishInternalCharValue(int valueid, const char* value)
     {
         if (system)
         {

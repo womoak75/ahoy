@@ -3,16 +3,17 @@
 
 #include "plugin.h"
 
+enum demoPluginIds {SOMEVALUE,SOMEOTHERVALUE};
+
 class demoPlugin : public Plugin
 {
 public:
     demoPlugin() : Plugin(999, "demo") {}
-    demoPlugin(int id, const char *name) : Plugin(id, name) {}
     void setup()
     {
         addTimerCb(SECOND, 3, [this]() { 
-            publishInternalValue("SOMEPLUGINOUTPUT", 42);
-            publishInternalCharValue("SOMEPLUGINOUTPUTCHAR", "blah blub");            
+            publishInternalValue(SOMEVALUE, 42);
+            publishInternalCharValue(SOMEOTHERVALUE, "blah blub");            
         });
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"ahoi world!",false);
@@ -38,12 +39,14 @@ public:
 
     void internalCallback(const PluginMessage *message)
     {
-        if(message->isFloatValue())
-            DPRINTLN(DBG_INFO,F("demoplugin.internalCallback: ")+String("Float: ")+String(message->getFloatValue()));
-        if(message->isCharValue())
-            DPRINTLN(DBG_INFO,F("demoplugin.internalCallback: ")+String("Char: ")+String(message->getCharValue()));
+        char buffer[64];
         if(message->isBoolValue())
-            DPRINTLN(DBG_INFO,F("demoplugin.internalCallback: ")+String("Bool: ")+String(message->getBoolValue()));
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%d",message->getPluginId(),message->getValueId(),message->getBoolValue());
+        else if(message->isFloatValue())
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%f",message->getPluginId(),message->getValueId(),message->getFloatValue());
+        else
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%s",message->getPluginId(),message->getValueId(),message->getCharValue());
+        DPRINTLN(DBG_INFO,buffer);
     }
 
     bool onRequest(JsonObject request, JsonObject response) { 

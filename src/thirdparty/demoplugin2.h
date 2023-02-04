@@ -3,15 +3,16 @@
 
 #include "plugin.h"
 
+enum demoPlugin2Ids {SOMEOTHERPLUGINOUTPUT};
+
 class demoPlugin2 : public Plugin
 {
 public:
     demoPlugin2() : Plugin(99,"demo2") {}
-    demoPlugin2(int id, const char* name) : Plugin(id,name) {}
 
     void setup() {
         addTimerCb(SECOND,7,[this](){
-            publishInternalBoolValue("SOMEOTHERPLUGINOUTPUT",(millis()%2==0)?true:false);
+            publishInternalBoolValue(SOMEOTHERPLUGINOUTPUT,(millis()%2==0)?true:false);
         });
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"hello world!",false);
@@ -35,15 +36,17 @@ public:
          DPRINTLN(DBG_INFO, F("demoplugin2.mqttCallback ") + String(message->topic));
       }
 
-     void internalCallback(const PluginMessage *message) {
+    void internalCallback(const PluginMessage *message) {
          // internal topic: '{pluginname}/{dataidentifier}'
-       if(message->isFloatValue())
-            DPRINTLN(DBG_INFO,F("demoplugin2.internalCallback: ")+String("Float: ")+String(message->getFloatValue()));
-        if(message->isCharValue())
-            DPRINTLN(DBG_INFO,F("demoplugin2.internalCallback: ")+String("Char: ")+String(message->getCharValue()));
+        char buffer[64];
         if(message->isBoolValue())
-            DPRINTLN(DBG_INFO,F("demoplugin2.internalCallback: ")+String("Bool: ")+String(message->getBoolValue()));
-     }
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%d",message->getPluginId(),message->getValueId(),message->getBoolValue());
+        else if(message->isFloatValue())
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%f",message->getPluginId(),message->getValueId(),message->getFloatValue());
+        else
+            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%s",message->getPluginId(),message->getValueId(),message->getCharValue());
+        DPRINTLN(DBG_INFO,buffer);
+    }
      MqttMessage mqttMsg;
 };
 
