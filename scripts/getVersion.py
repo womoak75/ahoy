@@ -102,11 +102,9 @@ def readVersion(path, infile):
 def getForkVersionPrefix():
     result = subprocess.run(['git','config','--get','remote.origin.url'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,text=True)
     print(result.returncode, result.stdout, result.stderr)
-    gituser = result.stdout.split(":")[1].split("/")[0]
-    print(gituser)
-    if gituser=="lumapu":
+    if result.stdout.__contains__("lumapu"):
         return ""
     else:
-        return gituser+"_"
+        return "custom_"
     
 readVersion("", "defines.h")
