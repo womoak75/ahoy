@@ -64,6 +64,7 @@ public:
     void loop()
     {
         app::loop();
+        publishInternal();
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
             plugins[i]->loop();
@@ -193,17 +194,16 @@ public:
         }
     }
 
-    void publishInternal(Plugin *plugin, PluginMessage *message)
-    {
-        for (unsigned int i = 0; i < plugins.size(); i++)
-        {
-            if (plugins[i]->getId() != plugin->getId())
-            {
-                plugins[i]->internalCallback(message);
-            }
-        }
+    void publishInternalValue(Plugin *sender, int valueid, float value) {
+        msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),valueid,value)));
     }
-    virtual const Plugin *getPluginById(int pluginid)
+    void publishInternalBoolValue(Plugin *sender, int valueid, bool value) {
+       msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),valueid,value)));
+    }
+    void publishInternalCharValue(Plugin *sender, int valueid, const char* value) {
+       msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),valueid,value)));
+    }
+    virtual const Plugin *getPluginById(int pluginid) 
     {
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
@@ -311,6 +311,24 @@ private:
         request->send(response);
     }
 
+    void publishInternal()
+    {
+        while(!msgs.empty()) {
+            std::shared_ptr<const PluginMessage> message = msgs.front();
+            int pluginid = message->getPluginId();
+            for (unsigned int i = 0; i < plugins.size(); i++)
+            {
+                if (plugins[i]->getId() != pluginid)
+                {
+                    plugins[i]->internalCallback(message.get());
+                }
+            }
+            msgs.pop();
+            // do i need this? :/
+            message.reset();
+        }
+    }
+
     PubMqttType *mMqtt;
     RestApiType *mRestapi;
     settings *mSettings;
@@ -327,6 +345,7 @@ private:
     std::queue<qentry> q;
     unsigned int maxnamelen = 0;
     std::vector<Plugin *> plugins;
+    std::queue<std::shared_ptr<const PluginMessage>> msgs;
 };
 
 #endif /*__PLUGINAPP_H__*/

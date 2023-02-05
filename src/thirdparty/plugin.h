@@ -99,7 +99,9 @@ public:
     virtual void subscribeMqtt(Plugin *plugin, char *topic, bool append) = 0;
     virtual void ctrlRequest(Plugin *plugin, JsonObject request) = 0;
     virtual bool enqueueMessage(Plugin *sender, char *topic, char *data, bool append) = 0;
-    virtual void publishInternal(Plugin *sender, PluginMessage *message) = 0;
+    virtual void publishInternalValue(Plugin *sender, int valueid, float value) = 0;
+    virtual void publishInternalBoolValue(Plugin *sender, int valueid, bool value) = 0;
+    virtual void publishInternalCharValue(Plugin *sender, int valueid, const char* value) = 0;
     virtual void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, uint32_t interval, std::function<void(void)> timerCb) = 0;
     virtual const Plugin *getPluginById(int pluginid);
     virtual const Plugin *getPluginByName(const char *pluginname);
@@ -244,8 +246,7 @@ public:
     {
         if (system)
         {
-            PluginMessage message(this->getId(),valueid,value);
-            system->publishInternal(this, &message);
+            system->publishInternalValue(this,valueid,value);
         }
     }
     /**
@@ -258,8 +259,7 @@ public:
     {
         if (system)
         {
-            PluginMessage message(this->getId(),valueid,value);
-            system->publishInternal(this, &message);
+            system->publishInternalBoolValue(this,valueid,value);
         }
     }
     /**
@@ -272,8 +272,7 @@ public:
     {
         if (system)
         {
-            PluginMessage message(this->getId(),valueid,value);
-            system->publishInternal(this, &message);
+            system->publishInternalCharValue(this,valueid,value);
         }
     }
     /**
