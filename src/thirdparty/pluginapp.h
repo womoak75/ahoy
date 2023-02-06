@@ -50,7 +50,6 @@ public:
     }
     void setup()
     {
-        app::setup();
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
             plugins[i]->setSystem(this);
@@ -60,6 +59,7 @@ public:
                 maxnamelen = strlen(plugins[i]->name);
             }
         }
+        app::setup();
     }
     void loop()
     {
@@ -75,8 +75,13 @@ public:
             mSettings->saveSettings();
         }
     }
-
-    boolean onThirdpartyPlugin(JsonObject request, JsonObject response) {
+    void onTickerSetup() {
+        for (unsigned int i = 0; i < plugins.size(); i++)
+        {
+            plugins[i]->onTickerSetup();
+        }
+    }
+    bool onThirdpartyPlugin(JsonObject request, JsonObject response) {
         if(request.containsKey(F("pluginid"))) {
             int id = request[F("pluginid")];
             for (unsigned int i = 0; i < plugins.size(); i++)
@@ -182,15 +187,15 @@ public:
         bufferindex = 0;
     }
 
-    void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intvaltype, uint32_t interval, std::function<void(void)> timerCb)
+    void addTimerCb(Plugin *plugin, const char* timername, PLUGIN_TIMER_INTVAL intvaltype, uint32_t interval, std::function<void(void)> timerCb)
     {
         if (intvaltype == PLUGIN_TIMER_INTVAL::MINUTE)
         {
-            every(timerCb, (interval * 60));
+            every(timerCb, (interval * 60), timername);
         }
         else if (intvaltype == PLUGIN_TIMER_INTVAL::SECOND)
         {
-            every(timerCb, interval);
+            every(timerCb, interval, timername);
         }
     }
 

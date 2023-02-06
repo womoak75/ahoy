@@ -14,6 +14,11 @@
 
 #include "../appInterface.h"
 
+#if defined(F) && defined(ESP32)
+  #undef F
+  #define F(sl) (sl)
+#endif
+
 class restCb {
     public:
     virtual void onRestMenu(JsonObject obj,uint8_t index) = 0;
@@ -26,6 +31,7 @@ class RestApi {
         RestApi() {
             mTimezoneOffset = 0;
             mFreeHeap = 0;
+            nr = 0;
         }
 
         void setup(IApp *app, HMSYSTEM *sys, AsyncWebServer *srv, settings_t *config) {
@@ -140,17 +146,34 @@ class RestApi {
             ep[F("record/config")] = url + F("record/config");
             ep[F("record/live")]   = url + F("record/live");
         }
+
         void onDwnldSetup(AsyncWebServerRequest *request) {
-            AsyncJsonResponse* response = new AsyncJsonResponse(false, 8192);
-            JsonObject root = response->getRoot();
+            AsyncWebServerResponse *response;
 
-            getSetup(root);
+            File fp = LittleFS.open("/settings.json", "r");
+            if(!fp) {
+                DPRINTLN(DBG_ERROR, F("failed to load settings"));
+                response = request->beginResponse(200, F("application/json"), "{}");
+            }
+            else {
+                String tmp = fp.readString();
+                int i = 0;
+                // remove all passwords
+                while (i != -1) {
+                    i = tmp.indexOf("\"pwd\":", i);
+                    if(-1 != i) {
+                        i+=7;
+                        tmp.remove(i, tmp.indexOf("\"", i)-i);
+                    }
+                }
+                response = request->beginResponse(200, F("application/json"), tmp);
+            }
 
-            response->setLength();
             response->addHeader("Content-Type", "application/octet-stream");
             response->addHeader("Content-Description", "File Transfer");
             response->addHeader("Content-Disposition", "attachment; filename=ahoy_setup.json");
             request->send(response);
+            fp.close();
         }
 
         void getGeneric(JsonObject obj) {
@@ -171,7 +194,7 @@ class RestApi {
             obj[F("device_name")]  = mConfig->sys.deviceName;
 
             obj[F("mac")]          = WiFi.macAddress();
-            obj[F("hostname")]     = WiFi.getHostname();
+            obj[F("hostname")]     = mConfig->sys.deviceName;
             obj[F("pwd_set")]      = (strlen(mConfig->sys.adminPwd) > 0);
             obj[F("prot_mask")]    = mConfig->sys.protectionMask;
 
@@ -253,6 +276,7 @@ class RestApi {
             obj[F("rx_fail_answer")] = stat->rxFailNoAnser;
             obj[F("frame_cnt")]      = stat->frmCnt;
             obj[F("tx_cnt")]         = mSys->Radio.mSendCnt;
+            obj[F("retransmits")]    = mSys->Radio.mRetransmits;
         }
 
         void getInverterList(JsonObject obj) {
@@ -269,6 +293,7 @@ class RestApi {
                     obj2[F("serial")]   = String(iv->config->serial.u64, HEX);
                     obj2[F("channels")] = iv->channels;
                     obj2[F("version")]  = String(iv->getFwVersion());
+                    obj2[F("yieldCor")] = iv->config->yieldCor;
 
                     for(uint8_t j = 0; j < iv->channels; j ++) {
                         obj2[F("ch_max_power")][j] = iv->config->chMaxPwr[j];
@@ -282,11 +307,15 @@ class RestApi {
         }
 
         void getMqtt(JsonObject obj) {
-            obj[F("broker")] = String(mConfig->mqtt.broker);
-            obj[F("port")]   = String(mConfig->mqtt.port);
-            obj[F("user")]   = String(mConfig->mqtt.user);
-            obj[F("pwd")]    = (strlen(mConfig->mqtt.pwd) > 0) ? F("{PWD}") : String("");
-            obj[F("topic")]  = String(mConfig->mqtt.topic);
+            obj[F("broker")]     = String(mConfig->mqtt.broker);
+            obj[F("port")]       = String(mConfig->mqtt.port);
+            obj[F("user")]       = String(mConfig->mqtt.user);
+            obj[F("pwd")]        = (strlen(mConfig->mqtt.pwd) > 0) ? F("{PWD}") : String("");
+            obj[F("topic")]      = String(mConfig->mqtt.topic);
+            obj[F("interval")]   = String(mConfig->mqtt.interval);
+            obj[F("rstMid")]     = (bool)mConfig->mqtt.rstYieldMidNight;
+            obj[F("rstNAvail")]  = (bool)mConfig->mqtt.rstValsNotAvail;
+            obj[F("rstComStop")] = (bool)mConfig->mqtt.rstValsCommStop;
         }
 
         void getNtp(JsonObject obj) {
@@ -331,6 +360,17 @@ class RestApi {
             ah::ip2Char(mConfig->sys.ip.gateway, buf); obj[F("gateway")] = String(buf);
         }
 
+        void getDisplay(JsonObject obj) {
+            obj[F("disp_type")] = (uint8_t)mConfig->plugin.display.type;
+            obj[F("disp_pwr")]  = (bool)mConfig->plugin.display.pwrSaveAtIvOffline;
+            obj[F("logo_en")]   = (bool)mConfig->plugin.display.logoEn;
+            obj[F("px_shift")]  = (bool)mConfig->plugin.display.pxShift;
+            obj[F("rot180")]    = (bool)mConfig->plugin.display.rot180;
+            obj[F("contrast")]  = (uint8_t)mConfig->plugin.display.contrast;
+            obj[F("pinDisp0")]  = mConfig->plugin.display.pin0;
+            obj[F("pinDisp1")]  = mConfig->plugin.display.pin1;
+        }
+
         void getMenu(JsonObject obj) {
             uint8_t i = 0;
             uint16_t mask = (mApp->getProtection()) ? mConfig->sys.protectionMask : 0;
@@ -363,14 +403,19 @@ class RestApi {
             obj[F("name")][i] = "Documentation";
             obj[F("link")][i] = "https://ahoydtu.de";
             obj[F("trgt")][i++] = "_blank";
-            if((strlen(mConfig->sys.adminPwd) > 0) && !mApp->getProtection()) {
+            if(strlen(mConfig->sys.adminPwd) > 0) {
                 obj[F("name")][i++] = "-";
-                obj[F("name")][i] = "Logout";
-                obj[F("link")][i++] = "/logout";
-            }
-            if(nullptr != mRestCb) {
+                if(mApp->getProtection()) {
+                    obj[F("name")][i] = "Login";
+                    obj[F("link")][i++] = "/login";
+                } else {
+                    obj[F("name")][i] = "Logout";
+                    obj[F("link")][i++] = "/logout";
+                }
+                if(nullptr != mRestCb) {
                 mRestCb->onRestMenu(obj,i);
             }
+        }
         }
 
         void getIndex(JsonObject obj) {
@@ -394,8 +439,8 @@ class RestApi {
                     invObj[F("id")]              = i;
                     invObj[F("name")]            = String(iv->config->name);
                     invObj[F("version")]         = String(iv->getFwVersion());
-                    invObj[F("is_avail")]        = iv->isAvailable(mApp->getTimestamp(), rec);
-                    invObj[F("is_producing")]    = iv->isProducing(mApp->getTimestamp(), rec);
+                    invObj[F("is_avail")]        = iv->isAvailable(mApp->getTimestamp());
+                    invObj[F("is_producing")]    = iv->isProducing(mApp->getTimestamp());
                     invObj[F("ts_last_success")] = iv->getLastTs(rec);
                 }
             }
@@ -420,6 +465,8 @@ class RestApi {
             JsonArray info = obj.createNestedArray(F("infos"));
             if(mApp->getMqttIsConnected())
                 info.add(F("MQTT is connected, ") + String(mApp->getMqttTxCnt()) + F(" packets sent, ") + String(mApp->getMqttRxCnt()) + F(" packets received"));
+            if(mConfig->mqtt.interval > 0)
+                info.add(F("MQTT publishes in a fixed interval of ") + String(mConfig->mqtt.interval) + F(" seconds"));
         }
 
         void getSetup(JsonObject obj) {
@@ -434,6 +481,7 @@ class RestApi {
             getRadio(obj.createNestedObject(F("radio")));
             getSerial(obj.createNestedObject(F("serial")));
             getStaticIp(obj.createNestedObject(F("static_ip")));
+            getDisplay(obj.createNestedObject(F("display")));            
             if(nullptr != mRestCb) {
                 mRestCb->onGetSetup(obj);
             }
@@ -522,18 +570,16 @@ class RestApi {
 
         bool setCtrl(JsonObject jsonIn, JsonObject jsonOut) {
             Inverter<> *iv = mSys->getInverterByPos(jsonIn[F("id")]);
+            bool accepted = true;
             if(NULL == iv) {
                 jsonOut[F("error")] = F("inverter index invalid: ") + jsonIn[F("id")].as<String>();
                 return false;
             }
 
-            if(F("power") == jsonIn[F("cmd")]) {
-                iv->devControlCmd = (jsonIn[F("val")] == 1) ? TurnOn : TurnOff;
-                iv->devControlRequest = true;
-            } else if(F("restart") == jsonIn[F("restart")]) {
-                iv->devControlCmd = Restart;
-                iv->devControlRequest = true;
-            }
+            if(F("power") == jsonIn[F("cmd")])
+                accepted = iv->setDevControlRequest((jsonIn[F("val")] == 1) ? TurnOn : TurnOff);
+            else if(F("restart") == jsonIn[F("restart")])
+                accepted = iv->setDevControlRequest(Restart);
             else if(0 == strncmp("limit_", jsonIn[F("cmd")].as<const char*>(), 6)) {
                 iv->powerLimit[0] = jsonIn["val"];
                 if(F("limit_persistent_relative") == jsonIn[F("cmd")])
@@ -544,8 +590,8 @@ class RestApi {
                     iv->powerLimit[1] = RelativNonPersistent;
                 else if(F("limit_nonpersistent_absolute") == jsonIn[F("cmd")])
                     iv->powerLimit[1] = AbsolutNonPersistent;
-                iv->devControlCmd = ActivePowerContr;
-                iv->devControlRequest = true;
+
+                accepted = iv->setDevControlRequest(ActivePowerContr);
             }
             else if(F("dev") == jsonIn[F("cmd")]) {
                 DPRINTLN(DBG_INFO, F("dev cmd"));
@@ -556,13 +602,18 @@ class RestApi {
                 return false;
             }
 
+            if(!accepted) {
+                jsonOut[F("error")] = F("inverter does not accept dev control request at this moment");
+                return false;
+            } else
+                mApp->ivSendHighPrio(iv);
+
             return true;
         }
 
         bool setSetup(JsonObject jsonIn, JsonObject jsonOut) {
-            if(F("scan_wifi") == jsonIn[F("cmd")]) {
+            if(F("scan_wifi") == jsonIn[F("cmd")])
                 mApp->scanAvailNetworks();
-            }
             else if(F("set_time") == jsonIn[F("cmd")])
                 mApp->setTimestamp(jsonIn[F("val")]);
             else if(F("sync_ntp") == jsonIn[F("cmd")])
@@ -587,6 +638,7 @@ class RestApi {
 
         uint32_t mTimezoneOffset;
         uint32_t mFreeHeap;
+        uint16_t nr;
 };
 
 #endif /*__WEB_API_H__*/

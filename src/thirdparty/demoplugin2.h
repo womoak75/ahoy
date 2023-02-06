@@ -11,13 +11,16 @@ public:
     demoPlugin2() : Plugin(99,"demo2") {}
 
     void setup() {
+
+    }
+    void onTickerSetup() {
         addTimerCb(SECOND,7,[this](){
             publishInternalBoolValue(SOMEOTHERPLUGINOUTPUT,(millis()%2==0)?true:false);
-        });
+        },"demoplugin2timer1");
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"hello world!",false);
             enqueueMessage((char*)"out",(char*)"ahoi world!"); 
-        });
+        },"demoplug2intimer2");
     }
     void onMqttSubscribe() {
         subscribeMqtt((char*)"external/topic",false);

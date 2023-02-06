@@ -11,14 +11,17 @@ public:
     demoPlugin() : Plugin(999, "demo") {}
     void setup()
     {
+
+    }
+    void onTickerSetup() {
         addTimerCb(SECOND, 3, [this]() { 
             publishInternalValue(SOMEVALUE, 42);
             publishInternalCharValue(SOMEOTHERVALUE, "blah blub");            
-        });
+        },"demoplugintimer1");
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"ahoi world!",false);
             enqueueMessage((char*)"out",(char*)"ahoi world!"); 
-        });
+        },"demoplugintimer2");
     }
     void loop()
     {

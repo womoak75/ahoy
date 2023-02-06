@@ -102,7 +102,7 @@ public:
     virtual void publishInternalValue(Plugin *sender, int valueid, float value) = 0;
     virtual void publishInternalBoolValue(Plugin *sender, int valueid, bool value) = 0;
     virtual void publishInternalCharValue(Plugin *sender, int valueid, const char* value) = 0;
-    virtual void addTimerCb(Plugin *plugin, PLUGIN_TIMER_INTVAL intval, uint32_t interval, std::function<void(void)> timerCb) = 0;
+    virtual void addTimerCb(Plugin *plugin, const char* timername, PLUGIN_TIMER_INTVAL intval, uint32_t interval, std::function<void(void)> timerCb) = 0;
     virtual const Plugin *getPluginById(int pluginid);
     virtual const Plugin *getPluginByName(const char *pluginname);
     virtual int getPluginCount();
@@ -182,6 +182,10 @@ public:
      * subscribe your topics here! :)
      */
     virtual void onMqttSubscribe() {}
+    /**
+     * called when tickers should be setup
+     */
+    virtual void onTickerSetup() {}
     /**
      * @brief called when settings are loaded
      * 
@@ -281,12 +285,13 @@ public:
      * @param intvaltype - MINUTE / SECOND
      * @param interval
      * @param timerCb - callback function
+     * @param timername
      */
-    void addTimerCb(PLUGIN_TIMER_INTVAL intvaltype, uint32_t interval, std::function<void(void)> timerCb)
+    void addTimerCb(PLUGIN_TIMER_INTVAL intvaltype, uint32_t interval, std::function<void(void)> timerCb, const char* timername)
     {
         if (system)
         {
-            system->addTimerCb(this, intvaltype, interval, timerCb);
+            system->addTimerCb(this, timername, intvaltype, interval, timerCb);
         }
     }
     const char *name;

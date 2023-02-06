@@ -18,10 +18,8 @@
 #include "config/settings.h"
 #include "defines.h"
 #include "utils/crc.h"
-#include "utils/ahoyTimer.h"
 #include "utils/scheduler.h"
 
-#include "hm/CircularBuffer.h"
 #include "hm/hmSystem.h"
 #include "hm/payload.h"
 #include "wifi/ahoywifi.h"
@@ -46,10 +44,8 @@ typedef PubMqtt<HmSystemType> PubMqttType;
 typedef PubSerial<HmSystemType> PubSerialType;
 
 // PLUGINS
-#if defined(ENA_NOKIA) || defined(ENA_SSD1306)
-    #include "plugins/MonochromeDisplay/MonochromeDisplay.h"
-    typedef MonochromeDisplay<HmSystemType> MonoDisplayType;
-#endif
+#include "plugins/MonochromeDisplay/MonochromeDisplay.h"
+typedef MonochromeDisplay<HmSystemType> MonoDisplayType;
 
 
 class app : public IApp, public ah::Scheduler {
@@ -59,13 +55,19 @@ class app : public IApp, public ah::Scheduler {
 
         void setup(void);
         void loop(void);
-        void handleIntr(void);
-        void cbMqtt(char* topic, byte* payload, unsigned int length);
-        void saveValues(void);
-        void resetPayload(Inverter<>* iv);
-        bool getWifiApActive(void);
+        void loopStandard(void);
+        void loopWifi(void);
+        void onWifi(bool gotIp);
+        void regularTickers(void);
+
         virtual void setupSettings(settings* appsettings) {}
         virtual void setupCB(PubMqttType* mqtt, WebType* webtype, RestApiType* restapi) {}
+        virtual void onTickerSetup() {}
+        
+        void handleIntr(void) {
+            if(NULL != mSys)
+                mSys->Radio.handleIntr();
+        }
 
         uint32_t getUptime() {
             return Scheduler::getUptime();
@@ -78,6 +80,10 @@ class app : public IApp, public ah::Scheduler {
         bool saveSettings() {
             mShowRebootRequest = true;
             return mSettings.saveSettings();
+        }
+
+        bool readSettings(const char *path) {
+            return mSettings.readSettings(path);
         }
 
         bool eraseSettings(bool eraseWifi = false) {
@@ -96,8 +102,12 @@ class app : public IApp, public ah::Scheduler {
             mWifi.getAvailNetworks(obj);
         }
 
+        void setOnUpdate() {
+            onWifi(false);
+        }
+
         void setRebootFlag() {
-            once(std::bind(&app::tickReboot, this), 1);
+            once(std::bind(&app::tickReboot, this), 3, "rboot");
         }
 
         const char *getVersion() {
@@ -121,7 +131,15 @@ class app : public IApp, public ah::Scheduler {
         }
 
         void setMqttDiscoveryFlag() {
-            once(std::bind(&PubMqttType::sendDiscoveryConfig, &mMqtt), 1);
+            once(std::bind(&PubMqttType::sendDiscoveryConfig, &mMqtt), 1, "disCf");
+        }
+
+        void setMqttPowerLimitAck(Inverter<> *iv) {
+            mMqtt.setPowerLimitAck(iv);
+        }
+
+        void ivSendHighPrio(Inverter<> *iv) {
+            mPayload.ivSendHighPrio(iv);
         }
 
         bool getMqttIsConnected() {
@@ -161,6 +179,10 @@ class app : public IApp, public ah::Scheduler {
             getStat(max);
         }
 
+        void getSchedulerNames(void) {
+            printSchedulers();
+        }
+
         void setTimestamp(uint32_t newTime) {
             DPRINTLN(DBG_DEBUG, F("setTimestamp: ") + String(newTime));
             if(0 == newTime)
@@ -172,15 +194,16 @@ class app : public IApp, public ah::Scheduler {
         HmSystemType *mSys;
 
     private:
+        typedef std::function<void()> innerLoopCb;
+
         void resetSystem(void);
 
         void payloadEventListener(uint8_t cmd) {
             #if !defined(AP_ONLY)
             mMqtt.payloadEventListener(cmd);
             #endif
-            #if defined(ENA_NOKIA) || defined(ENA_SSD1306)
-            mMonoDisplay.payloadEventListener(cmd);
-            #endif
+            if(mConfig->plugin.display.type != 0)
+                mMonoDisplay.payloadEventListener(cmd);
         }
 
         void mqttSubRxCb(JsonObject obj);
@@ -190,13 +213,19 @@ class app : public IApp, public ah::Scheduler {
 
         void tickReboot(void) {
             DPRINTLN(DBG_INFO, F("Rebooting..."));
+            onWifi(false);
+            ah::Scheduler::resetTicker();
+            WiFi.disconnect();
             ESP.restart();
         }
 
         void tickNtpUpdate(void);
         void tickCalcSunrise(void);
         void tickIVCommunication(void);
+        void tickSun(void);
+        void tickComm(void);
         void tickSend(void);
+        void tickMidnight(void);
         /*void tickSerial(void) {
             if(Serial.available() == 0)
                 return;
@@ -212,6 +241,8 @@ class app : public IApp, public ah::Scheduler {
             DBGPRINTLN("");
         }*/
 
+        innerLoopCb mInnerLoopCb;
+
         bool mShowRebootRequest;
         bool mIVCommunicationOn;
 
@@ -226,25 +257,20 @@ class app : public IApp, public ah::Scheduler {
         settings_t *mConfig;
 
         uint8_t mSendLastIvId;
-        uint8_t mSendTickerId;
 
         statistics_t mStat;
 
-        // timer
-        uint32_t mRxTicker;
-
         // mqtt
         PubMqttType mMqtt;
-        bool mMqttActive;
+        bool mMqttReconnect;
+        bool mMqttEnabled;
 
         // sun
         int32_t mCalculatedTimezoneOffset;
         uint32_t mSunrise, mSunset;
 
         // plugins
-        #if defined(ENA_NOKIA) || defined(ENA_SSD1306)
         MonoDisplayType mMonoDisplay;
-        #endif
 };
 
 #endif /*__APP_H__*/
