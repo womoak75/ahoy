@@ -9,6 +9,7 @@
 #include "../utils/dbg.h"
 #include <RF24.h>
 #include "../utils/crc.h"
+#include "../config/config.h"
 
 #define SPI_SPEED           1000000
 
@@ -42,8 +43,6 @@ const char* const rf24AmpPowerNames[] = {"MIN", "LOW", "HIGH", "MAX"};
 })
 
 #define BIT_CNT(x)  ((x)<<3)
-
-static volatile bool mIrqRcvd;
 
 //-----------------------------------------------------------------------------
 // HM Radio class
@@ -292,16 +291,16 @@ class HmRadio {
                 mTxBuf[len++] = (crc     ) & 0xff;
             }
             // crc over all
-            mTxBuf[len++] = ah::crc8(mTxBuf, len);
+            mTxBuf[len+1] = ah::crc8(mTxBuf, len);
 
             if(mSerialDebug) {
-                DPRINT(DBG_INFO, "TX " + String(len) + "B Ch" + String(mRfChLst[mTxChIdx]) + " | ");
-                dumpBuf(mTxBuf, len);
+                DPRINT(DBG_INFO, "TX " + String(len+1) + "B Ch" + String(mRfChLst[mTxChIdx]) + " | ");
+                dumpBuf(mTxBuf, len+1);
             }
 
             mNrf24.setChannel(mRfChLst[mTxChIdx]);
             mNrf24.openWritingPipe(reinterpret_cast<uint8_t*>(&invId));
-            mNrf24.startWrite(mTxBuf, len, false); // false = request ACK response
+            mNrf24.startWrite(mTxBuf, len+1, false); // false = request ACK response
 
             // switch TX channel for next packet
             if(++mTxChIdx >= RF_CHANNELS)
@@ -313,6 +312,7 @@ class HmRadio {
                 mSendCnt++;
         }
 
+        volatile bool mIrqRcvd;
         uint64_t DTU_RADIO_ID;
 
         uint8_t mRfChLst[RF_CHANNELS];

@@ -21,7 +21,8 @@
 #include "utils/scheduler.h"
 
 #include "hm/hmSystem.h"
-#include "hm/payload.h"
+#include "hm/hmPayload.h"
+#include "hm/miPayload.h"
 #include "wifi/ahoywifi.h"
 #include "web/web.h"
 #include "web/RestApi.h"
@@ -37,7 +38,8 @@
 #define ACOS(x) (degrees(acos(x)))
 
 typedef HmSystem<MAX_NUM_INVERTERS> HmSystemType;
-typedef Payload<HmSystemType> PayloadType;
+typedef HmPayload<HmSystemType> PayloadType;
+typedef MiPayload<HmSystemType> MiPayloadType;
 typedef Web<HmSystemType> WebType;
 typedef RestApi<HmSystemType> RestApiType;
 typedef PubMqtt<HmSystemType> PubMqttType;
@@ -65,8 +67,7 @@ class app : public IApp, public ah::Scheduler {
         virtual void onTickerSetup() {}
         
         void handleIntr(void) {
-            if(NULL != mSys)
-                mSys->Radio.handleIntr();
+            mSys.Radio.handleIntr();
         }
 
         uint32_t getUptime() {
@@ -191,7 +192,7 @@ class app : public IApp, public ah::Scheduler {
                 Scheduler::setTimestamp(newTime);
         }
 
-        HmSystemType *mSys;
+        HmSystemType mSys;
 
     private:
         typedef std::function<void()> innerLoopCb;
@@ -250,6 +251,7 @@ class app : public IApp, public ah::Scheduler {
         WebType mWeb;
         RestApiType mApi;
         PayloadType mPayload;
+        MiPayloadType mMiPayload;
         PubSerialType mPubSerial;
 
         char mVersion[12];

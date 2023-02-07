@@ -3,8 +3,8 @@
 // Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
 //-----------------------------------------------------------------------------
 
-#ifndef __PAYLOAD_H__
-#define __PAYLOAD_H__
+#ifndef __HM_PAYLOAD_H__
+#define __HM_PAYLOAD_H__
 
 #include "../utils/dbg.h"
 #include "../utils/crc.h"
@@ -32,9 +32,9 @@ typedef std::function<void(uint16_t alarmCode, uint32_t start, uint32_t end)> al
 
 
 template<class HMSYSTEM>
-class Payload {
+class HmPayload {
     public:
-        Payload() {}
+        HmPayload() {}
 
         void setup(IApp *app, HMSYSTEM *sys, statistics_t *stat, uint8_t maxRetransmits, uint32_t *timestamp) {
             mApp        = app;
@@ -48,7 +48,7 @@ class Payload {
             mSerialDebug  = false;
             mHighPrioIv   = NULL;
             mCbAlarm      = NULL;
-            mCbAlarm = NULL;
+            mCbPayload    = NULL;
         }
 
         void enableSerialDebug(bool enable) {
@@ -119,12 +119,7 @@ class Payload {
             }
         }
 
-        void add(packet_t *p) {
-            Inverter<> *iv = mSys->findInverter(&p->packet[1]);
-
-            if(NULL == iv)
-                return;
-
+        void add(Inverter<> *iv, packet_t *p) {
             if (p->packet[0] == (TX_REQ_INFO + ALL_FRAMES)) {  // response from get information command
                 mPayload[iv->id].txId = p->packet[0];
                 DPRINTLN(DBG_DEBUG, F("Response from info request received"));
@@ -290,7 +285,8 @@ class Payload {
 
     private:
         void notify(uint8_t val) {
-            (mCbPayload)(val);
+            if(NULL != mCbPayload)
+                (mCbPayload)(val);
         }
 
         void notify(uint16_t code, uint32_t start, uint32_t endTime) {
@@ -353,4 +349,4 @@ class Payload {
         payloadListenerType mCbPayload;
 };
 
-#endif /*__PAYLOAD_H_*/
+#endif /*__HM_PAYLOAD_H__*/
