@@ -39,9 +39,9 @@ public:
         }));
         restapi->mRestCb = this;
         Inverter<> *iv;
-        for (uint8_t i = 0; i < mSys->getNumInverters(); i++)
+        for (uint8_t i = 0; i < mSys.getNumInverters(); i++)
         {
-            iv = mSys->getInverterByPos(i, false);
+            iv = mSys.getInverterByPos(i, false);
             if (NULL != iv)
             {
                 iv->mInverterCb = this;
