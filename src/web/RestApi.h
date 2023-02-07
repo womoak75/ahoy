@@ -412,10 +412,10 @@ class RestApi {
                     obj[F("name")][i] = "Logout";
                     obj[F("link")][i++] = "/logout";
                 }
-                if(nullptr != mRestCb) {
+            }
+            if(nullptr != mRestCb) {
                 mRestCb->onRestMenu(obj,i);
             }
-        }
         }
 
         void getIndex(JsonObject obj) {
