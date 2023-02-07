@@ -102,6 +102,7 @@
             }
             function saveCb(resp) {
                 console.log(resp);
+                window.alert('saved!');
             }
             function thirdpartysave() {
                 getAjax("/thirdpartysave", saveCb, "POST", JSON.stringify(mRoot));
