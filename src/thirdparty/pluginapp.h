@@ -198,15 +198,11 @@ public:
             every(timerCb, interval, timername);
         }
     }
-
-    void publishInternalValue(Plugin *sender, int valueid, float value) {
-        msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),valueid,value)));
+    void publishInternalValues(Plugin *sender, std::initializer_list<ValueEntry>& elements) {
+        msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),elements)));
     }
-    void publishInternalBoolValue(Plugin *sender, int valueid, bool value) {
-       msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),valueid,value)));
-    }
-    void publishInternalCharValue(Plugin *sender, int valueid, const char* value) {
-       msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),valueid,value)));
+    void publishInternalValue(Plugin *sender, ValueEntry value) {
+        msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),value)));
     }
     virtual const Plugin *getPluginById(int pluginid) 
     {

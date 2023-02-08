@@ -15,8 +15,7 @@ public:
     }
     void onTickerSetup() {
         addTimerCb(SECOND, 3, [this]() { 
-            publishInternalValue(SOMEVALUE, 42);
-            publishInternalCharValue(SOMEOTHERVALUE, "blah blub");            
+            publishInternalValues({ValueEntry(SOMEVALUE, (float)42.0),ValueEntry(SOMEOTHERVALUE, "blah blub")});            
         },"demoplugintimer1");
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"ahoi world!",false);
@@ -43,13 +42,15 @@ public:
     void internalCallback(const PluginMessage *message)
     {
         char buffer[64];
-        if(message->isBoolValue())
-            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%d",message->getPluginId(),message->getValueId(),message->getBoolValue());
-        else if(message->isFloatValue())
-            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%f",message->getPluginId(),message->getValueId(),message->getFloatValue());
-        else
-            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%s",message->getPluginId(),message->getValueId(),message->getCharValue());
-        DPRINTLN(DBG_INFO,buffer);
+        for(int index = 0 ; index < message->getValueEntryCount(); index++) {
+            if(message->isBoolValue(index))
+                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%d",message->getPluginId(),message->getValueId(index),message->getBoolValue(index));
+            else if(message->isFloatValue(index))
+                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%f",message->getPluginId(),message->getValueId(index),message->getFloatValue(index));
+            else
+                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%s",message->getPluginId(),message->getValueId(index),message->getCharValue(index));
+            DPRINTLN(DBG_INFO,buffer);
+        }
     }
 
     bool onRequest(JsonObject request, JsonObject response) { 

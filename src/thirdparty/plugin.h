@@ -7,57 +7,92 @@ typedef enum {
     CHAR
 } ValueType;
 typedef struct {
-    bool value;
-} BoolMsg;
-typedef struct {
-    float value;
-} FloatMsg;
-typedef struct {
-    const char* value;
-} CharMsg;
-typedef union {
-    FloatMsg floatmsg;
-    BoolMsg boolmsg;
-    CharMsg charmsg;
-} DataValue;
-typedef struct {
-    int pluginid;
     int valueid;
+    bool value;
+} BoolValue;
+typedef struct {
+    int valueid;
+    float value;
+} FloatValue;
+typedef struct {
+    int valueid;
+    const char* value;
+} CharValue;
+typedef union DataValue {
+    FloatValue floatmsg;
+    BoolValue boolmsg;
+    CharValue charmsg;
+} DataValue;
+typedef struct ValueEntry {
     ValueType valuetype;
-    DataValue content;
-} DataMsg;
+    DataValue value;
+    ValueEntry() {
+        value.floatmsg.valueid = 0;
+        value.floatmsg.value = 0.0;
+        valuetype = ValueType::FLOAT;
+    }
+    ValueEntry(int id, float v) {
+        value.floatmsg.valueid = id;
+        value.floatmsg.value = v;
+        valuetype = ValueType::FLOAT;
+    }
+    ValueEntry(int id, bool v) {
+        value.boolmsg.valueid = id;
+        value.boolmsg.value = v;
+        valuetype = ValueType::BOOL;
+    }
+    ValueEntry(int id, const char *v) {
+        value.charmsg.valueid = id;
+        value.charmsg.value = v;
+        valuetype = ValueType::CHAR;
+    }
+} ValueEntry;
 
 class PluginMessage
 {
 public:
-    PluginMessage(int id, int valueid, float v) {
-        data.pluginid = id;
-        data.valueid = valueid;
-        data.valuetype = ValueType::FLOAT;
-        data.content.floatmsg.value = v;
+    PluginMessage(int id, const std::initializer_list<ValueEntry> &elements) : data(elements) {
+        pluginid = id;
+        valueCount = data.size();
     }
-    PluginMessage(int id, int valueid, bool v) {
-        data.pluginid = id;
-        data.valueid = valueid;
-        data.valuetype = ValueType::BOOL;
-        data.content.boolmsg.value = v;
+    PluginMessage(int id, ValueEntry entry) {
+        pluginid = id;
+        data.push_back(entry);
+        valueCount = data.size();
     }
-    PluginMessage(int id, int valueid, const char* v) {
-        data.pluginid = id;
-        data.valueid = valueid;
-        data.valuetype = ValueType::CHAR;
-        data.content.charmsg.value = v;
+    ~PluginMessage() { 
     }
-    bool isBoolValue() const { return (data.valuetype==ValueType::BOOL);}
-    bool isFloatValue() const{ return (data.valuetype==ValueType::FLOAT);}
-    bool isCharValue() const{ return (data.valuetype==ValueType::CHAR);}
-    float getFloatValue() const{ return data.content.floatmsg.value; }
-    bool getBoolValue() const{ return data.content.boolmsg.value; }
-    const char* getCharValue() const{ return data.content.charmsg.value; }
-    int getPluginId() const{ return data.pluginid;}
-    const int getValueId() const{ return data.valueid;}
+    bool isBoolValue(int index) const { 
+        if(index>=valueCount)
+            return false;
+        return (data[index].valuetype==ValueType::BOOL);}
+    bool isFloatValue(int index) const{ 
+        if(index>=valueCount)
+            return false;
+        return (data[index].valuetype==ValueType::FLOAT);}
+    bool isCharValue(int index) const{ 
+        if(index>=valueCount)
+            return false;
+        return (data[index].valuetype==ValueType::CHAR);}
+    float getFloatValue(int index) const{ 
+        if(index>=valueCount)
+            return -1;
+        return data[index].value.floatmsg.value; }
+    bool getBoolValue(int index) const{ 
+        if(index>=valueCount)
+            return false; 
+        return data[index].value.boolmsg.value; }
+    const char* getCharValue(int index) const{ 
+        if(index>=valueCount)
+            return "nodata";
+        return data[index].value.charmsg.value; }
+    int getPluginId() const{ return pluginid;}
+    const int getValueEntryCount() const{ return valueCount;}
+    const int getValueId(int index) const{ return data[index].value.charmsg.valueid;}
     private:
-        DataMsg data;
+        int pluginid;
+        int valueCount;
+        std::vector<ValueEntry> data;
 };
 
 class InverterMessage
@@ -99,9 +134,8 @@ public:
     virtual void subscribeMqtt(Plugin *plugin, char *topic, bool append) = 0;
     virtual void ctrlRequest(Plugin *plugin, JsonObject request) = 0;
     virtual bool enqueueMessage(Plugin *sender, char *topic, char *data, bool append) = 0;
-    virtual void publishInternalValue(Plugin *sender, int valueid, float value) = 0;
-    virtual void publishInternalBoolValue(Plugin *sender, int valueid, bool value) = 0;
-    virtual void publishInternalCharValue(Plugin *sender, int valueid, const char* value) = 0;
+    virtual void publishInternalValues(Plugin *sender, std::initializer_list<ValueEntry>& elements) = 0;
+    virtual void publishInternalValue(Plugin *sender, ValueEntry value) = 0;
     virtual void addTimerCb(Plugin *plugin, const char* timername, PLUGIN_TIMER_INTVAL intval, uint32_t interval, std::function<void(void)> timerCb) = 0;
     virtual const Plugin *getPluginById(int pluginid);
     virtual const Plugin *getPluginByName(const char *pluginname);
@@ -240,43 +274,23 @@ public:
         }
         return false;
     }
+    void publishInternalValues(std::initializer_list<ValueEntry>  elements) {
+        if (system)
+        {
+            system->publishInternalValues(this,elements);
+        }
+    }
     /**
      * @brief publish internal message to all plugins
      * 
      * @param valueid - value identifier
      * @param value
      */
-    void publishInternalValue(int valueid, float value)
+    void publishInternalValue(ValueEntry value)
     {
         if (system)
         {
-            system->publishInternalValue(this,valueid,value);
-        }
-    }
-    /**
-     * @brief publish internal message to all plugins
-     * 
-     * @param valueid - value identifier
-     * @param value - bool
-     */
-    void publishInternalBoolValue(int valueid, bool value)
-    {
-        if (system)
-        {
-            system->publishInternalBoolValue(this,valueid,value);
-        }
-    }
-    /**
-     * @brief publish internal message to all plugins
-     * 
-     * @param valueid - value identifier
-     * @param value - char*
-     */
-    void publishInternalCharValue(int valueid, const char* value)
-    {
-        if (system)
-        {
-            system->publishInternalCharValue(this,valueid,value);
+            system->publishInternalValue(this,value);
         }
     }
     /**
