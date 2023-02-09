@@ -1,6 +1,10 @@
 #ifndef __PLUGIN_H__
 #define __PLUGIN_H__
 
+#if __has_include("pluginids.h")
+    #include "pluginids.h"
+#endif
+
 typedef enum {
     BOOL,
     FLOAT,

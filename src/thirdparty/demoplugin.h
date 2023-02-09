@@ -3,10 +3,12 @@
 
 #include "plugin.h"
 
-enum demoPluginIds {SOMEVALUE,SOMEOTHERVALUE};
+
 
 class demoPlugin : public Plugin
 {
+    enum demoPluginIds {SOMEVALUE,SOMEOTHERVALUE};
+
 public:
     demoPlugin() : Plugin(999, "demo") {}
     void setup()

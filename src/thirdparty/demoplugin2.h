@@ -3,10 +3,9 @@
 
 #include "plugin.h"
 
-enum demoPlugin2Ids {SOMEOTHERPLUGINOUTPUT};
-
 class demoPlugin2 : public Plugin
 {
+    enum demoPlugin2Ids {SOMEOTHERPLUGINOUTPUT};
 public:
     demoPlugin2() : Plugin(99,"demo2") {}
 
@@ -23,7 +22,7 @@ public:
             enqueueMessage((char*)"out",(char*)"ahoi world!"); 
         },"demoplug2intimer2");
         addTimerCb(SECOND,10,[this]{
-DPRINTLN(DBG_INFO, F("free heap: ") + String(system_get_free_heap_size()));
+            DPRINTLN(DBG_INFO, F("free heap: ") + String(system_get_free_heap_size()));
         },"heapcheck");
     }
     void onMqttSubscribe() {
@@ -45,6 +44,8 @@ DPRINTLN(DBG_INFO, F("free heap: ") + String(system_get_free_heap_size()));
 
     void internalCallback(const PluginMessage *message) {
          // internal topic: '{pluginname}/{dataidentifier}'
+         if(message->getPluginId()!=PluginIds::PluginDemo)
+            return;
         char buffer[64];
         for(int index = 0 ; index < message->getValueEntryCount(); index++) {
             if(message->isBoolValue(index))

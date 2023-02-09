@@ -6,8 +6,10 @@
 .vscode/extensions.json
 src/config/config_override.h
 src/web/html/h/*
+src/thirdparty/pluginids.h
 /**/Debug
 /**/v16/*
 *.db
 *.suo
 *.ipch
+
