@@ -50,6 +50,10 @@ jobs:
       working-directory: src/web/html
       run: python convert.py
 
+    - name: Generate pluginIds
+      working-directory: src/thirdparty
+      run: python generateIds.py
+
     - name: Run PlatformIO
       run: pio run -d src --environment esp8266-release --environment esp8285-release --environment esp32-wroom32-release
 
