@@ -2,7 +2,7 @@ name: Ahoy Dev-Build for ESP8266/ESP32
 
 on:
   push:
-    branches: development*
+    branches: devel*
     paths-ignore:
     - '**.md' # Do no build on *.md changes
 jobs:
@@ -45,6 +45,10 @@ jobs:
     - name: Convert HTML files
       working-directory: src/web/html
       run: python convert.py
+
+    - name: Generate pluginIds
+      working-directory: src/thirdparty
+      run: python generateIds.py
 
     - name: Run PlatformIO
       run: pio run -d src --environment esp8266-release --environment esp8285-release --environment esp32-wroom32-release
