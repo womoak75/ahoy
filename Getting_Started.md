@@ -295,10 +295,10 @@ and extend your custom code class from 'plugin'
 
 #include "plugin.h"
 
-enum myCustomCodeIds {CUSTOMCODEIDX,CUSTOMCODEIDY};
-
 class MyCustomCode : public plugin
 {
+    enum myCustomCodeIds {CUSTOMCODEIDX,CUSTOMCODEIDY};
+    
 public:
     MyCustomCode() : Plugin(23,"mycustomcode") {}
     
