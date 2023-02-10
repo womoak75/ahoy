@@ -66,7 +66,7 @@ class RestApi {
         void onApi(AsyncWebServerRequest *request) {
             mFreeHeap = ESP.getFreeHeap();
 
-            AsyncJsonResponse* response = new AsyncJsonResponse(false, 8192);
+            AsyncJsonResponse* response = new AsyncJsonResponse(false, 4096);
             JsonObject root = response->getRoot();
 
             String path = request->url().substring(5);
