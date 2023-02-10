@@ -67,7 +67,8 @@ public:
         publishInternal();
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
-            plugins[i]->loop();
+            if(plugins[i]->isEnabled())
+                plugins[i]->loop();
         }
         publish();
         if(saveTpSettings) {
@@ -78,7 +79,8 @@ public:
     void onTickerSetup() {
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
-            plugins[i]->onTickerSetup();
+            if(plugins[i]->isEnabled())
+                plugins[i]->onTickerSetup();
         }
     }
     bool onThirdpartyPlugin(JsonObject request, JsonObject response) {
@@ -119,7 +121,8 @@ public:
         message.value = value;
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
-            plugins[i]->inverterCallback(&message);
+            if(plugins[i]->isEnabled())
+                plugins[i]->inverterCallback(&message);
         }
     }
     void ctrlRequest(Plugin *plugin, JsonObject request)
@@ -252,6 +255,7 @@ public:
                 if (tpsettings.containsKey(plugins[i]->name))
                 {
                     plugins[i]->loadSettings(tpsettings[plugins[i]->name]);
+                    plugins[i]->loadPluginSettings(tpsettings[plugins[i]->name]);
                 }
             }
     }
@@ -273,6 +277,7 @@ public:
             JsonObject pluginjson = tpsettings.createNestedObject(plugins[i]->name);
             //pluginjson[F("id")] = plugins[i]->getId();
             plugins[i]->saveSettings(pluginjson);
+            plugins[i]->savePluginSettings(pluginjson);
         }
     }
 
@@ -281,7 +286,8 @@ public:
         mMqtt->subscribe("thirdparty/#");
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
-            plugins[i]->onMqttSubscribe();
+            if(plugins[i]->isEnabled())
+                plugins[i]->onMqttSubscribe();
         }
     }
     void onMqttMessage(const char *topic, const uint8_t *payload, size_t len)
@@ -293,7 +299,8 @@ public:
         msg.length = len;
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
-            plugins[i]->mqttCallback(&msg);
+            if(plugins[i]->isEnabled())
+                plugins[i]->mqttCallback(&msg);
         }
     }
     void onRestMenu(JsonObject obj, uint8_t index)
@@ -321,7 +328,8 @@ private:
             {
                 if (plugins[i]->getId() != pluginid)
                 {
-                    plugins[i]->internalCallback(message.get());
+                    if(plugins[i]->isEnabled())
+                        plugins[i]->internalCallback(message.get());
                 }
             }
             msgs.pop();

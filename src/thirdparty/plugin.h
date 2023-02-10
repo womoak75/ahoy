@@ -158,6 +158,15 @@ public:
         name = _name;
     }
     int getId() { return id; }
+    bool isEnabled() { return enabled; }
+    void loadPluginSettings(JsonObject s) {
+        if(s.containsKey(F("enabled"))) {
+            enabled = s[F("enabled")];
+        }
+    }
+    void savePluginSettings(JsonObject s) {
+        s[F("enabled")]=enabled;
+    }
     void setSystem(System *s)
     {
         system = s;
@@ -317,5 +326,6 @@ public:
 private:
     int id;
     System *system;
+    bool enabled = false;
 };
 #endif

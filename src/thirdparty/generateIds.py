@@ -47,7 +47,7 @@ try:
     scriptdir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
     approot = os.path.dirname(os.path.abspath(sys.argv[1]))
-    scriptdir= os.path.join(approot, 'thirdparty')
+    scriptdir = os.path.join(approot, 'thirdparty')
 genfilename = 'pluginids.h'  
 gendir = scriptdir+'/'+genfilename                 
 print(scriptdir)
