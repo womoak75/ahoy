@@ -329,14 +329,7 @@ public:
 
      void internalCallback(const PluginMessage *message) {
          // reiceive data from other plugins ... if there are some :)
-        char buffer[64];
-        if(message->isBoolValue())
-            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%d",message->getPluginId(),message->getValueId(),message->getBoolValue());
-        else if(message->isFloatValue())
-            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%f",message->getPluginId(),message->getValueId(),message->getFloatValue());
-        else
-            snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%s",message->getPluginId(),message->getValueId(),message->getCharValue());
-        DPRINTLN(DBG_INFO,buffer);
+        DBGPRINTMESSAGELN(DBG_INFO,message)
      }
 };
 
