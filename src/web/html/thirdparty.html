@@ -108,7 +108,7 @@
                 getAjax("/thirdpartysave", saveCb, "POST", JSON.stringify(mRoot));
             }
             getAjax("/api/menu", parseM);
-            getAjax("/thirdpartysetup", setupCb);
+            setTimeout(function(){getAjax("/thirdpartysetup", setupCb);},1000);
         </script>
     </body>
 </html>
