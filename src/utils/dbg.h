@@ -33,6 +33,9 @@
 #ifdef NDEBUG
     #define DBGPRINT(str)
     #define DBGPRINTLN(str)
+    #define DHEX(b)
+    #define DPRINT(level, str) 
+    #define DPRINTLN(level, str) 
 #else
     #ifdef ARDUINO
         #define DBG_CB std::function<void(String)>
@@ -91,7 +94,7 @@
             }
         }
     #endif
-#endif
+
 
 
 #if DEBUG_LEVEL >= DBG_ERROR
@@ -153,5 +156,6 @@
         default:        PVERBLN(str); break; \
     }\
 })
+#endif
 
 #endif /*__DBG_H__*/

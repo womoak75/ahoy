@@ -92,9 +92,9 @@ class Web {
             mWeb.addHandler(&mEvts);
 
             mWeb.begin();
-
+#ifndef NDEBUG
             registerDebugCb(std::bind(&Web::serialCb, this, std::placeholders::_1)); // dbg.h
-
+#endif
             mUploadFail = false;
         }
 
