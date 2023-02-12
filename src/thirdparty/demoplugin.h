@@ -23,6 +23,11 @@ public:
             enqueueMessage((char*)"out",(char*)"ahoi world!",false);
             enqueueMessage((char*)"out",(char*)"ahoi world!"); 
         },"demoplugintimer2");
+        if(debugHeap) {
+            addTimerCb(SECOND, 10, [this]() {
+                DPRINTLN(DBG_INFO, F("free heap: ") + String(ESP.getFreeHeap()));
+            },"debugHeapTimer");
+        }
     }
     void loop()
     {
@@ -43,7 +48,9 @@ public:
 
     void internalCallback(const PluginMessage *message)
     {
-        DBGPRINTMESSAGELN(DBG_INFO,message);
+        if(debugPluginMessages) {
+            DBGPRINTMESSAGELN(DBG_INFO,message);
+        }
     }
 
     bool onRequest(JsonObject request, JsonObject response) { 
@@ -52,6 +59,8 @@ public:
     }
 
     void saveSettings(JsonObject settings) {
+        settings[F("debugHeap")]=debugHeap;
+        settings[F("debugPluginMessages")]=debugPluginMessages;
         settings[F("booleansetting")]=booleansetting;
         settings[F("floatsetting")]=floatsetting;
         settings[F("stringsetting")]=stringsetting;
@@ -63,8 +72,14 @@ public:
             floatsetting=settings[F("floatsetting")];
         if(settings.containsKey(F("stringsetting")))
             settings[F("stringsetting")].as<String>().toCharArray(stringsetting,sizeof(stringsetting));
+        if(settings.containsKey(F("debugHeap")))
+            debugHeap=settings[F("debugHeap")];
+         if(settings.containsKey(F("debugPluginMessages")))
+            debugPluginMessages=settings[F("debugPluginMessages")];
     }
     private:
+    bool debugHeap = false;
+    bool debugPluginMessages = false;
     bool booleansetting = false;
     float floatsetting = 23.0;
     char stringsetting[32] = "some default string";
