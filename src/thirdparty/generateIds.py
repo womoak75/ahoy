@@ -8,6 +8,8 @@ def writeFile(outf,pluginlist):
     outfile.write("#define __PLUGINIDS_H__\n\n")
     generateIds(outfile, pluginlist)
     generateValueIds(outfile, pluginlist)
+    generateValueIdsString(outfile,pluginlist)
+    generateDebugFunction(outfile, pluginlist)
     outfile.write("\n#endif /* __PLUGINIDS_H__ */\n")
     outfile.close
     
@@ -24,14 +26,47 @@ def generateValueIds(f,plist):
             f.write("    "+v.replace(" ","")+",\n")
         f.write("};\n")
 
-def gggenerateIds(f,pid,pname,vid):
-    f.write("const int "+pname+"PluginId = "+pid+";\n")
-    index = 0
-    for vi in vids:
-        vi = vi.replace(" ","")
-        f.write("const int "+pname+"PluginValueId_"+vi+" = "+str(index)+";\n")
-        index+=1
-        #print(id)
+def generateValueIdsString(f,plist):
+    for p in plist:
+        f.write("const char Plugin"+p['pname'].capitalize()+"IdString[] PROGMEM = \""+p['pname'].capitalize()+"\";\n")
+        for v in p['enumvalue']:
+            enumval = v.replace(" ","")
+            f.write("const char Plugin"+p['pname'].capitalize()+enumval+"IdString[] PROGMEM = \""+enumval+"\";\n")
+    f.write("const char PluginUnknown[] PROGMEM = \"unknown\";\n")
+
+def generateDebugFunction(f,plist):
+    f.write("const char* const getPluginNameDebug(int pid) {\n\tswitch(pid){\n")
+    for p in plist:
+        f.write("\t\tcase "+p['pid']+": return Plugin"+p['pname'].capitalize()+"IdString;\n")
+    f.write("\t\tdefault: return PluginUnknown;\n")
+    f.write("}\n}\n")
+    f.write("const char* const getPluginValueNameDebug(int pid, int vid) {\n\tswitch(pid){\n")
+    for p in plist:
+        f.write("\t\tcase "+p['pid']+": switch(vid){\t\t\t\n")
+        i = 0
+        for v in p['enumvalue']:
+            f.write("\t\t\t\tcase "+str(i)+": return Plugin"+p['pname'].capitalize()+v.replace(" ","")+"IdString;\n")
+            i+=1
+        f.write("\t\t\t\tdefault: return PluginUnknown;\n")
+        f.write("}\n")
+    f.write("\t\t\tdefault: return PluginUnknown;\n")
+    f.write("}\n}\n")
+    f.write("#ifdef NDEBUG\n")
+    f.write("#define DBGPRINTMESSAGELN(level,message)\n")
+    f.write("#else\n")
+    f.write("#define DBGPRINTMESSAGELN(level,message) ({\\\n")
+    f.write("       char msgbuffer[64];\\\n")
+    f.write("    for(int index = 0 ; index < message->getValueEntryCount(); index++) {\\\n")
+    f.write("        if(message->isBoolValue(index))\\\n")
+    f.write("            snprintf(msgbuffer,sizeof(msgbuffer),\"%s-%s: %d\",getPluginNameDebug(message->getPluginId()),getPluginValueNameDebug(message->getPluginId(),message->getValueId(index)),message->getBoolValue(index));\\\n")
+    f.write("        else if(message->isFloatValue(index))\\\n")
+    f.write("            snprintf(msgbuffer,sizeof(msgbuffer),\"%s-%s: %f\",getPluginNameDebug(message->getPluginId()),getPluginValueNameDebug(message->getPluginId(),message->getValueId(index)),message->getFloatValue(index));\\\n")
+    f.write("        else\\\n")
+    f.write("            snprintf(msgbuffer,sizeof(msgbuffer),\"%s-%s: %s\",getPluginNameDebug(message->getPluginId()),getPluginValueNameDebug(message->getPluginId(),message->getValueId(index)),message->getCharValue(index));\\\n")
+    f.write("       DPRINTLN(level,msgbuffer);\\\n")
+    f.write("    }\\\n")
+    f.write("  })\n")
+    f.write("#endif\n")
         
 def parseFile(fin):
     f = open(fin, "r")
