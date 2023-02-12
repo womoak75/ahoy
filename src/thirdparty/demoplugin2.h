@@ -44,18 +44,9 @@ public:
 
     void internalCallback(const PluginMessage *message) {
          // internal topic: '{pluginname}/{dataidentifier}'
-         if(message->getPluginId()!=PluginIds::PluginDemo)
+        if(message->getPluginId()!=PluginIds::PluginDemo)
             return;
-        char buffer[64];
-        for(int index = 0 ; index < message->getValueEntryCount(); index++) {
-            if(message->isBoolValue(index))
-                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Bool:%d",message->getPluginId(),message->getValueId(index),message->getBoolValue(index));
-            else if(message->isFloatValue(index))
-                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Float:%f",message->getPluginId(),message->getValueId(index),message->getFloatValue(index));
-            else
-                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Char:%s",message->getPluginId(),message->getValueId(index),message->getCharValue(index));
-            DPRINTLN(DBG_INFO,buffer);
-        }
+        DBGPRINTMESSAGELN(DBG_INFO,message);
     }
      MqttMessage mqttMsg;
 };

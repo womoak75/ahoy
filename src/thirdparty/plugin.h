@@ -82,6 +82,14 @@ public:
         if(index>=valueCount)
             return -1;
         return data[index].value.floatmsg.value; }
+    float getFloatValueById(int valueid) const {
+        for(int i = 0; i < valueCount; i++) {
+            if(getValueId(i)==valueid) {
+                return getFloatValue(i);
+            }
+        }
+        return -1;
+    }
     bool getBoolValue(int index) const{ 
         if(index>=valueCount)
             return false; 
@@ -93,6 +101,22 @@ public:
     int getPluginId() const{ return pluginid;}
     const int getValueEntryCount() const{ return valueCount;}
     const int getValueId(int index) const{ return data[index].value.charmsg.valueid;}
+    const bool from(int _pluginid) const {
+        return (pluginid==_pluginid);
+    }
+    const bool has(int _pluginid, int _valueid) const {
+        if(pluginid==_pluginid) {
+            if(valueCount==1) {
+                return (getValueId(0)==_valueid);
+            }
+            for(int i = 0; i < valueCount; i++) {
+                if(getValueId(i)==_valueid) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
     private:
         int pluginid;
         int valueCount;

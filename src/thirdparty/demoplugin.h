@@ -43,16 +43,7 @@ public:
 
     void internalCallback(const PluginMessage *message)
     {
-        char buffer[64];
-        for(int index = 0 ; index < message->getValueEntryCount(); index++) {
-            if(message->isBoolValue(index))
-                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%d",message->getPluginId(),message->getValueId(index),message->getBoolValue(index));
-            else if(message->isFloatValue(index))
-                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%f",message->getPluginId(),message->getValueId(index),message->getFloatValue(index));
-            else
-                snprintf(buffer,sizeof(buffer),"Plugin:%d,Valueid:%d,Value:%s",message->getPluginId(),message->getValueId(index),message->getCharValue(index));
-            DPRINTLN(DBG_INFO,buffer);
-        }
+        DBGPRINTMESSAGELN(DBG_INFO,message);
     }
 
     bool onRequest(JsonObject request, JsonObject response) { 
