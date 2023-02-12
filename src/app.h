@@ -140,7 +140,8 @@ class app : public IApp, public ah::Scheduler {
         }
 
         void ivSendHighPrio(Inverter<> *iv) {
-            mPayload.ivSendHighPrio(iv);
+            if(mIVCommunicationOn) // only send commands if communcation is enabled
+                mPayload.ivSendHighPrio(iv);
         }
 
         bool getMqttIsConnected() {
@@ -227,6 +228,7 @@ class app : public IApp, public ah::Scheduler {
         void tickComm(void);
         void tickSend(void);
         void tickMinute(void);
+        void tickZeroValues(void);
         void tickMidnight(void);
         /*void tickSerial(void) {
             if(Serial.available() == 0)
@@ -260,6 +262,7 @@ class app : public IApp, public ah::Scheduler {
         settings_t *mConfig;
 
         uint8_t mSendLastIvId;
+        bool mSendFirst;
 
         statistics_t mStat;
 

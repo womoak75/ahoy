@@ -2,6 +2,26 @@
 
 (starting from release version `0.5.66`)
 
+## 0.5.86
+* prevent send devcontrol request during disabled night communication
+* changed yield total correction as module (inverter input) value #570
+* MQTT Yield Day zero, next try to fix #671
+
+## 0.5.85
+* fix power-limit was not checked for max retransmits #667
+* fix blue LED lights up all the time #672
+* fix installing schedulers if NTP server isn't available
+* improved zero values on triggers #671
+* hardcoded MQTT subtopics, because wildcard `#` leads to errors
+* rephrased some messages on webif, thx to @Argafal #638
+* fixed 'polling stop message' on `index.html` #639
+
+## 0.5.84
+* fix blue LED lights up all the time #672
+* added an instant start communication (once NTP is synced)
+* add MI 3rd generation inverters (10x2 serial numbers)
+* first decodings of messages from MI 2nd generation inverters
+
 ## 0.5.83
 * fix MQTT publishing, `callback` was set but reset by following `setup()`
 

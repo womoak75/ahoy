@@ -78,7 +78,7 @@ class PubMqtt {
             #endif
         }
 
-        void connect() {
+        inline void connect() {
             mReconnectRequest = false;
             if(!mClient.connected())
                 mClient.connect();
@@ -142,6 +142,7 @@ class PubMqtt {
         }
 
         void payloadEventListener(uint8_t cmd) {
+            connect();
             if(mClient.connected()) { // prevent overflow if MQTT broker is not reachable but set
                 if((0 == mCfgMqtt->interval) || (RealTimeRunData_Debug != cmd)) // no interval or no live data
                     mSendList.push(cmd);
@@ -312,8 +313,12 @@ class PubMqtt {
             tickerMinute();
             publish(mLwtTopic, mLwtOnline, true, false);
 
-            subscribe("ctrl/#");
-            subscribe("setup/#");
+            subscribe("ctrl/limit_persistent_relative");
+            subscribe("ctrl/limit_persistent_absolute");
+            subscribe("ctrl/limit_nonpersistent_relative");
+            subscribe("ctrl/limit_nonpersistent_absolute");
+            subscribe("setup/set_time");
+            subscribe("setup/sync_ntp");
             if(nullptr != mMqttCb) {
                 mMqttCb->onMqttConnect();
             }
@@ -398,8 +403,7 @@ class PubMqtt {
             /*char out[128];
             serializeJson(root, out, 128);
             DPRINTLN(DBG_INFO, "json: " + String(out));*/
-            if(NULL != mSubscriptionCb)
-                (mSubscriptionCb)(root);
+            (mSubscriptionCb)(root);
             if(nullptr != mMqttCb)
                 mMqttCb->onMqttMessage(topic,payload,len);
             mRxCnt++;
@@ -484,7 +488,7 @@ class PubMqtt {
             }
         }
 
-        void sendIvData(bool sendTotals = true) {
+        void sendIvData() {
             if(mSendList.empty())
                 return;
 
@@ -537,8 +541,8 @@ class PubMqtt {
                                         total[3] += iv->getValue(i, rec);
                                         break;
                                 }
+                                sendTotal = true;
                             }
-                            sendTotal = true;
                         }
                         yield();
                     }
@@ -546,9 +550,6 @@ class PubMqtt {
                 }
 
                 mSendList.pop(); // remove from list once all inverters were processed
-
-                if(!sendTotals) // skip total value calculation
-                    continue;
 
                 if ((true == sendTotal) && processIvStatus()) {
                     uint8_t fieldId;

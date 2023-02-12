@@ -104,6 +104,7 @@ class HmRadio {
             mNrf24.setRetries(3, 15); // 3*250us + 250us and 15 loops -> 15ms
 
             mNrf24.setChannel(mRfChLst[mRxChIdx]);
+            mNrf24.startListening();
             mNrf24.setDataRate(RF24_250KBPS);
             mNrf24.setAutoAck(true);
             mNrf24.enableDynamicPayloads();
@@ -149,7 +150,6 @@ class HmRadio {
                         mIrqRcvd = false;
                         if (getReceived()) {        // everything received
                             //DBGPRINTLN("RX finished Cnt: " + String(300-cnt) + " time used: " + String(millis()-debug_ms)+ " ms");
-                            mNrf24.stopListening();
                             return true;
                         }
                     }
@@ -160,7 +160,6 @@ class HmRadio {
             }
             // not finished but time is over
             //DBGPRINTLN("RX not finished: 300 time used: " + String(millis()-debug_ms)+ " ms");
-            mNrf24.stopListening();
             return true;
         }
 
@@ -191,9 +190,9 @@ class HmRadio {
             sendPacket(invId, cnt, isRetransmit, true);
         }
 
-        void sendTimePacket(uint64_t invId, uint8_t cmd, uint32_t ts, uint16_t alarmMesId, bool isRetransmit) {
-            DPRINTLN(DBG_DEBUG, F("sendTimePacket 0x") + String(cmd, HEX));
-            initPacket(invId, TX_REQ_INFO, ALL_FRAMES);
+        void prepareDevInformCmd(uint64_t invId, uint8_t cmd, uint32_t ts, uint16_t alarmMesId, bool isRetransmit, uint8_t reqfld=TX_REQ_INFO) { // might not be necessary to add additional arg.
+            DPRINTLN(DBG_DEBUG, F("prepareDevInformCmd 0x") + String(cmd, HEX));
+            initPacket(invId, reqfld, ALL_FRAMES);
             mTxBuf[10] = cmd; // cid
             mTxBuf[11] = 0x00;
             CP_U32_LittleEndian(&mTxBuf[12], ts);
@@ -299,6 +298,7 @@ class HmRadio {
                 dumpBuf(mTxBuf, len);
             }
 
+            mNrf24.stopListening();
             mNrf24.setChannel(mRfChLst[mTxChIdx]);
             mNrf24.openWritingPipe(reinterpret_cast<uint8_t*>(&invId));
             mNrf24.startWrite(mTxBuf, len, false); // false = request ACK response
