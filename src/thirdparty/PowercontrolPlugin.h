@@ -31,7 +31,7 @@ public:
         actlimit = l;
     }
 
-    void internalCallback(const PluginMessage *message) {
+    void internalDataCallback(PluginDataMessage *message) {
         if(message->has(PluginIds::PluginMeter,PluginMeterIds::ACPOWER_SUPPLY_ACTUAL)) {
             DPRINTLN(DBG_DEBUG, F("powercontroller got act supply"));
             actsupply = message->getFloatValueById(PluginMeterIds::ACPOWER_SUPPLY_ACTUAL);

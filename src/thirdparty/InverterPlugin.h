@@ -64,7 +64,7 @@ public:
             updateInverter = true;
         }
     }
-    void internalCallback(const PluginMessage *message) {
+    void internalDataCallback(PluginDataMessage *message) {
         if(message->has(PluginIds::PluginPowercontrol,PluginPowercontrolIds::ACT_POWERLIMIT)) {
             newlimit = message->getFloatValueById(PluginPowercontrolIds::ACT_POWERLIMIT);
             updateLimit = true;

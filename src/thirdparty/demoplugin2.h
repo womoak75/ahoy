@@ -42,7 +42,7 @@ public:
          DPRINTLN(DBG_INFO, F("demoplugin2.mqttCallback ") + String(message->topic));
       }
 
-    void internalCallback(const PluginMessage *message) {
+    void internalDataCallback(PluginDataMessage *message) {
          // internal topic: '{pluginname}/{dataidentifier}'
         if(message->getPluginId()!=PluginIds::PluginDemo)
             return;

@@ -46,8 +46,8 @@ public:
         DPRINTLN(DBG_INFO, F("demoplugin.mqttCallback ") + String(message->topic)+String(" = ")+String((char*)message->payload));
     }
 
-    void internalCallback(const PluginMessage *message)
-    {
+    void internalDataCallback(PluginDataMessage *message)
+    {   
         if(debugPluginMessages) {
             DBGPRINTMESSAGELN(DBG_INFO,message);
         }

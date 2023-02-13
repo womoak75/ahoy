@@ -202,10 +202,10 @@ public:
         }
     }
     void publishInternalValues(Plugin *sender, std::initializer_list<ValueEntry>& elements) {
-        msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),elements)));
+        msgs.push(std::make_shared<PluginDataMessage>(PluginDataMessage(sender->getId(),elements)));
     }
     void publishInternalValue(Plugin *sender, ValueEntry value) {
-        msgs.push(std::make_shared<const PluginMessage>(PluginMessage(sender->getId(),value)));
+        msgs.push(std::make_shared<PluginDataMessage>(PluginDataMessage(sender->getId(),value)));
     }
     virtual const Plugin *getPluginById(int pluginid) 
     {
@@ -322,14 +322,26 @@ private:
     void publishInternal()
     {
         while(!msgs.empty()) {
-            std::shared_ptr<const PluginMessage> message = msgs.front();
+            auto message = msgs.front();
             int pluginid = message->getPluginId();
-            for (unsigned int i = 0; i < plugins.size(); i++)
-            {
-                if (plugins[i]->getId() != pluginid)
+            if(message->isDataMessage()) {
+                auto datamessage = std::static_pointer_cast<PluginDataMessage>(message);
+                for (unsigned int i = 0; i < plugins.size(); i++)
                 {
-                    if(plugins[i]->isEnabled())
-                        plugins[i]->internalCallback(message.get());
+                    if (plugins[i]->getId() != pluginid)
+                    {
+                        if(plugins[i]->isEnabled())
+                            plugins[i]->internalDataCallback(datamessage.get());
+                    }
+                }
+            } else {
+                for (unsigned int i = 0; i < plugins.size(); i++)
+                {
+                    if (plugins[i]->getId() != pluginid)
+                    {
+                        if(plugins[i]->isEnabled())
+                            plugins[i]->internalCallback(message);
+                    }
                 }
             }
             msgs.pop();
@@ -354,7 +366,7 @@ private:
     std::queue<qentry> q;
     unsigned int maxnamelen = 0;
     std::vector<Plugin *> plugins;
-    std::queue<std::shared_ptr<const PluginMessage>> msgs;
+    std::queue<std::shared_ptr<PluginMessage>> msgs;
 };
 
 #endif /*__PLUGINAPP_H__*/

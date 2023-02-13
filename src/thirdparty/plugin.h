@@ -5,6 +5,42 @@
     #include "pluginids.h"
 #endif
 
+enum TagValue {
+    REQUEST = 1,
+    RESPONSE = 2,
+    BROADCAST = 4,
+    DATA = 8,
+    UNUSED3 = 16,
+    UNUSED4 = 32,
+    UNUSED5 = 64,
+    UNUSED6 = 128,
+};
+
+struct Tags
+{
+    Tags(TagValue v) { setTag(v); }
+    Tags() { mTags = 0;}
+
+    //Sets flag to true
+    void setTag(TagValue tag)
+    {
+        mTags |= (unsigned int)tag;
+    }
+    void unsetFlag(TagValue tag)
+    {
+        mTags &= ~(unsigned int)tag;
+    }
+    void flipFlag(TagValue tag)
+    {
+        mTags ^= (unsigned int)tag;
+    }
+    bool hasTag(TagValue tag)
+    {
+        return (mTags & (unsigned int)tag) == (unsigned int)tag;
+    }
+    unsigned int mTags;
+};
+
 typedef enum {
     BOOL,
     FLOAT,
@@ -55,16 +91,36 @@ typedef struct ValueEntry {
 class PluginMessage
 {
 public:
-    PluginMessage(int id, const std::initializer_list<ValueEntry> &elements) : data(elements) {
-        pluginid = id;
+    PluginMessage(int _pluginid, Tags t) {
+        pluginid =_pluginid;
+        _tags = t;
+    }
+    const Tags getTags() const {
+        return _tags;
+    }
+    const bool hasTag(TagValue value) {
+        return _tags.hasTag(value);
+    }
+    const int getPluginId() const{ return pluginid;}
+    const bool isDataMessage() { return _tags.hasTag(DATA);}
+    
+    protected:
+    int pluginid;
+    Tags _tags;
+};
+
+class PluginDataMessage : public PluginMessage
+{
+
+public:
+    PluginDataMessage(int id, const std::initializer_list<ValueEntry> &elements) : PluginMessage(id,Tags(TagValue::DATA)), data(elements) {
         valueCount = data.size();
     }
-    PluginMessage(int id, ValueEntry entry) {
-        pluginid = id;
+    PluginDataMessage(int id, ValueEntry entry) : PluginMessage(id,Tags(TagValue::DATA)) {
         data.push_back(entry);
         valueCount = data.size();
     }
-    ~PluginMessage() { 
+    ~PluginDataMessage() { 
     }
     bool isBoolValue(int index) const { 
         if(index>=valueCount)
@@ -118,7 +174,6 @@ public:
         return false;
     }
     private:
-        int pluginid;
         int valueCount;
         std::vector<ValueEntry> data;
 };
@@ -227,6 +282,14 @@ public:
      *  @param MqttMessage
      */
     virtual void mqttCallback(const MqttMessage *message) {}
+        /**
+     * internalCallback
+     *
+     * will be called from 'system'
+     *
+     *  @param PluginMessage
+     */
+    virtual void internalDataCallback(PluginDataMessage *message) {}
     /**
      * internalCallback
      *
@@ -234,7 +297,7 @@ public:
      *
      *  @param PluginMessage
      */
-    virtual void internalCallback(const PluginMessage *message) {}
+    virtual void internalCallback(std::shared_ptr<PluginMessage> message) {}
     /**
      * called when json message was posted to /thirdpartyplugins.
      * message must contain either 'pluginid' or 'pluginname'.
