@@ -17,7 +17,9 @@ public:
     }
     void onTickerSetup() {
         addTimerCb(SECOND, 3, [this]() { 
-            publishInternalValues({ValueEntry(SOMEVALUE, (float)42.0),ValueEntry(SOMEOTHERVALUE, "blah blub")});            
+            PluginMessage m(*this);
+            m.addList(FloatValue(SOMEVALUE, (float)42.0),StringValue(SOMEOTHERVALUE, "blah blub")); 
+            publishMessage(m);
         },"demoplugintimer1");
         addTimerCb(SECOND, 4, [this]() {
             enqueueMessage((char*)"out",(char*)"ahoi world!",false);
@@ -46,7 +48,7 @@ public:
         DPRINTLN(DBG_INFO, F("demoplugin.mqttCallback ") + String(message->topic)+String(" = ")+String((char*)message->payload));
     }
 
-    void internalDataCallback(PluginDataMessage *message)
+    void internalDataCallback(PluginMessage *message)
     {   
         if(debugPluginMessages) {
             DBGPRINTMESSAGELN(DBG_INFO,message);

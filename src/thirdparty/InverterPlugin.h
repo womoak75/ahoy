@@ -55,7 +55,9 @@ public:
         for(int i = 0; i < MAX_NUM_INVERTERS; i++) {
             sum+=inverterac[i];
         }
-        publishInternalValue(ValueEntry(ACPOWER_TOTAL,sum));
+        PluginMessage m(*this);
+        m.add(FloatValue(ACPOWER_TOTAL,sum));
+        publishMessage(m);
     }
     void inverterCallback(const InverterMessage *message)
     {
@@ -64,7 +66,7 @@ public:
             updateInverter = true;
         }
     }
-    void internalDataCallback(PluginDataMessage *message) {
+    void internalDataCallback(PluginMessage *message) {
         if(message->has(PluginIds::PluginPowercontrol,PluginPowercontrolIds::ACT_POWERLIMIT)) {
             newlimit = message->getFloatValueById(PluginPowercontrolIds::ACT_POWERLIMIT);
             updateLimit = true;

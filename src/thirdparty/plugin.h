@@ -1,181 +1,62 @@
 #ifndef __PLUGIN_H__
 #define __PLUGIN_H__
 
+#include "generic.hpp"
 #if __has_include("pluginids.h")
     #include "pluginids.h"
 #endif
 
-enum TagValue {
-    REQUEST = 1,
-    RESPONSE = 2,
-    BROADCAST = 4,
-    DATA = 8,
-    UNUSED3 = 16,
-    UNUSED4 = 32,
-    UNUSED5 = 64,
-    UNUSED6 = 128,
+
+enum TYPEIDS { 
+    DUMMY, 
+    FLOATVALUE_TYPE,INTVALUE_TYPE,BOOLVALUE_TYPE,STRINGVALUE_TYPE,
+    PLUGINMESSAGE_TYPE
 };
 
-struct Tags
+typedef IdData<float,FLOATVALUE_TYPE> FloatValue;
+template <>
+struct EntityIds<FloatValue>
 {
-    Tags(TagValue v) { setTag(v); }
-    Tags() { mTags = 0;}
-
-    //Sets flag to true
-    void setTag(TagValue tag)
-    {
-        mTags |= (unsigned int)tag;
-    }
-    void unsetFlag(TagValue tag)
-    {
-        mTags &= ~(unsigned int)tag;
-    }
-    void flipFlag(TagValue tag)
-    {
-        mTags ^= (unsigned int)tag;
-    }
-    bool hasTag(TagValue tag)
-    {
-        return (mTags & (unsigned int)tag) == (unsigned int)tag;
-    }
-    unsigned int mTags;
+    enum { type_id = TYPEIDS::FLOATVALUE_TYPE };
+};
+typedef IdData<bool,BOOLVALUE_TYPE> BoolValue;
+template <>
+struct EntityIds<BoolValue>
+{
+    enum { type_id = TYPEIDS::BOOLVALUE_TYPE };
+};
+typedef IdData<int,INTVALUE_TYPE> IntValue;
+template <>
+struct EntityIds<IntValue>
+{
+    enum { type_id = TYPEIDS::INTVALUE_TYPE };
+};
+typedef IdData<String,STRINGVALUE_TYPE> StringValue;
+template <>
+struct EntityIds<StringValue>
+{
+    enum { type_id = TYPEIDS::STRINGVALUE_TYPE };
+};
+class PluginMessage;
+template <>
+struct EntityIds<PluginMessage>
+{
+    enum { type_id = TYPEIDS::PLUGINMESSAGE_TYPE };
 };
 
-typedef enum {
-    BOOL,
-    FLOAT,
-    CHAR
-} ValueType;
-typedef struct {
-    int valueid;
-    bool value;
-} BoolValue;
-typedef struct {
-    int valueid;
-    float value;
-} FloatValue;
-typedef struct {
-    int valueid;
-    const char* value;
-} CharValue;
-typedef union DataValue {
-    FloatValue floatmsg;
-    BoolValue boolmsg;
-    CharValue charmsg;
-} DataValue;
-typedef struct ValueEntry {
-    ValueType valuetype;
-    DataValue value;
-    ValueEntry() {
-        value.floatmsg.valueid = 0;
-        value.floatmsg.value = 0.0;
-        valuetype = ValueType::FLOAT;
-    }
-    ValueEntry(int id, float v) {
-        value.floatmsg.valueid = id;
-        value.floatmsg.value = v;
-        valuetype = ValueType::FLOAT;
-    }
-    ValueEntry(int id, bool v) {
-        value.boolmsg.valueid = id;
-        value.boolmsg.value = v;
-        valuetype = ValueType::BOOL;
-    }
-    ValueEntry(int id, const char *v) {
-        value.charmsg.valueid = id;
-        value.charmsg.value = v;
-        valuetype = ValueType::CHAR;
-    }
-} ValueEntry;
 
-class PluginMessage
-{
-public:
-    PluginMessage(int _pluginid, Tags t) {
-        pluginid =_pluginid;
-        _tags = t;
-    }
-    const Tags getTags() const {
-        return _tags;
-    }
-    const bool hasTag(TagValue value) {
-        return _tags.hasTag(value);
-    }
-    const int getPluginId() const{ return pluginid;}
-    const bool isDataMessage() { return _tags.hasTag(DATA);}
-    
+//class Message;
+enum class METADATAIDS { SENDERID, RECEIVERID, EMPTY_TAG};
+class MetaData : public ContainerMap<METADATAIDS,Entity> {
+
+    public:
+    int getSenderId() {return getValueAs<IntValue>(METADATAIDS::SENDERID).value;}
+    int getReceiverId() {return getValueAs<IntValue>(METADATAIDS::RECEIVERID).value;}
     protected:
-    int pluginid;
-    Tags _tags;
-};
-
-class PluginDataMessage : public PluginMessage
-{
-
-public:
-    PluginDataMessage(int id, const std::initializer_list<ValueEntry> &elements) : PluginMessage(id,Tags(TagValue::DATA)), data(elements) {
-        valueCount = data.size();
-    }
-    PluginDataMessage(int id, ValueEntry entry) : PluginMessage(id,Tags(TagValue::DATA)) {
-        data.push_back(entry);
-        valueCount = data.size();
-    }
-    ~PluginDataMessage() { 
-    }
-    bool isBoolValue(int index) const { 
-        if(index>=valueCount)
-            return false;
-        return (data[index].valuetype==ValueType::BOOL);}
-    bool isFloatValue(int index) const{ 
-        if(index>=valueCount)
-            return false;
-        return (data[index].valuetype==ValueType::FLOAT);}
-    bool isCharValue(int index) const{ 
-        if(index>=valueCount)
-            return false;
-        return (data[index].valuetype==ValueType::CHAR);}
-    float getFloatValue(int index) const{ 
-        if(index>=valueCount)
-            return -1;
-        return data[index].value.floatmsg.value; }
-    float getFloatValueById(int valueid) const {
-        for(int i = 0; i < valueCount; i++) {
-            if(getValueId(i)==valueid) {
-                return getFloatValue(i);
-            }
-        }
-        return -1;
-    }
-    bool getBoolValue(int index) const{ 
-        if(index>=valueCount)
-            return false; 
-        return data[index].value.boolmsg.value; }
-    const char* getCharValue(int index) const{ 
-        if(index>=valueCount)
-            return "nodata";
-        return data[index].value.charmsg.value; }
-    int getPluginId() const{ return pluginid;}
-    const int getValueEntryCount() const{ return valueCount;}
-    const int getValueId(int index) const{ return data[index].value.charmsg.valueid;}
-    const bool from(int _pluginid) const {
-        return (pluginid==_pluginid);
-    }
-    const bool has(int _pluginid, int _valueid) const {
-        if(pluginid==_pluginid) {
-            if(valueCount==1) {
-                return (getValueId(0)==_valueid);
-            }
-            for(int i = 0; i < valueCount; i++) {
-                if(getValueId(i)==_valueid) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-    private:
-        int valueCount;
-        std::vector<ValueEntry> data;
+    void setSenderId(int id) { add(METADATAIDS::SENDERID,IntValue(0,id)); }
+    void setReceiverId(int id) { add(METADATAIDS::RECEIVERID,IntValue(0,id)); }
+    
+    friend class PluginMessage;
 };
 
 class InverterMessage
@@ -210,6 +91,7 @@ typedef enum
     MINUTE
 } PLUGIN_TIMER_INTVAL;
 class Plugin;
+class PluginMessage;
 
 class System
 {
@@ -217,11 +99,10 @@ public:
     virtual void subscribeMqtt(Plugin *plugin, char *topic, bool append) = 0;
     virtual void ctrlRequest(Plugin *plugin, JsonObject request) = 0;
     virtual bool enqueueMessage(Plugin *sender, char *topic, char *data, bool append) = 0;
-    virtual void publishInternalValues(Plugin *sender, std::initializer_list<ValueEntry>& elements) = 0;
-    virtual void publishInternalValue(Plugin *sender, ValueEntry value) = 0;
+    virtual void publishMessage(Plugin *sender, PluginMessage& message) = 0;
     virtual void addTimerCb(Plugin *plugin, const char* timername, PLUGIN_TIMER_INTVAL intval, uint32_t interval, std::function<void(void)> timerCb) = 0;
-    virtual const Plugin *getPluginById(int pluginid);
-    virtual const Plugin *getPluginByName(const char *pluginname);
+    virtual Plugin *getPluginById(int pluginid);
+    virtual Plugin *getPluginByName(const char *pluginname);
     virtual int getPluginCount();
 };
 
@@ -257,7 +138,7 @@ public:
      *
      * @param app - pointer to ahoi settings
      */
-    virtual void setup() = 0;
+    virtual void setup() {}
     /**
      * loop
      *
@@ -265,7 +146,7 @@ public:
      *
      * @param app - pointer to ahoi app
      */
-    virtual void loop() = 0;
+    virtual void loop() {} 
     /**
      * inverterCallback
      *
@@ -289,7 +170,7 @@ public:
      *
      *  @param PluginMessage
      */
-    virtual void internalDataCallback(PluginDataMessage *message) {}
+    virtual void internalDataCallback(PluginMessage *message) {}
     /**
      * internalCallback
      *
@@ -374,23 +255,23 @@ public:
         }
         return false;
     }
-    void publishInternalValues(std::initializer_list<ValueEntry>  elements) {
-        if (system)
-        {
-            system->publishInternalValues(this,elements);
-        }
-    }
+    // void publishInternalValues(IdEntity...  &elements) {
+    //     if (system)
+    //     {
+    //         system->publishInternalValues(this,elements);
+    //     }
+    // }
     /**
      * @brief publish internal message to all plugins
      * 
      * @param valueid - value identifier
      * @param value
      */
-    void publishInternalValue(ValueEntry value)
+    void publishMessage(PluginMessage& message)
     {
         if (system)
         {
-            system->publishInternalValue(this,value);
+            system->publishMessage(this,message);
         }
     }
     /**
@@ -415,4 +296,45 @@ private:
     System *system;
     bool enabled = false;
 };
+
+
+class PluginMessage :  public ContainerVector<IdEntity>, public Entity {
+
+    public:
+    PluginMessage(Plugin &plugin) : PluginMessage(plugin.getId(),0) {}
+    PluginMessage(int senderid, int receiverid) : Entity(TYPEIDS::PLUGINMESSAGE_TYPE) {
+        headers.setSenderId(senderid);
+        headers.setReceiverId(receiverid);
+    }
+    PluginMessage(const PluginMessage &v) = default;
+    //PluginMessage(int senderid) : PluginMessage(senderid,0) { }
+    MetaData& getMetaData() { return headers; }
+    bool hasData() { return (entities.size()>0);}
+    bool from(int senderid) {
+        return (headers.getSenderId()==senderid);
+    }
+    int getSenderId() { return headers.getSenderId(); }
+    int getReceiverId() { return headers.getReceiverId(); }
+    bool has(int senderid, int dataid) {
+        return (from(senderid)&&hasDataId(dataid));
+    }
+    bool hasDataId(int id) {
+        for(unsigned int i=0; i < getEntryCount() ; i++) {
+            if(get(i).getId()==id)
+                return true;
+        }
+        return false;
+    }
+    bool hasHeader(METADATAIDS id) { return headers.hasKey(id);}
+    // hack!!!
+    float getFloatValueById(int dataid) {
+        for(unsigned int i=0; i < getEntryCount() ; i++) {
+            if(get(i).getId()==dataid&&isType<FloatValue>(i))
+                return getAs<FloatValue>(i).value;
+        }
+        return 0;
+    }
+    protected:
+    MetaData headers;
+ };
 #endif

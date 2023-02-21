@@ -27,11 +27,13 @@ public:
         // publishLimit(newlimit);
     }
     void publishLimit(float l) {
-        publishInternalValue(ValueEntry(ACT_POWERLIMIT,l));
+        PluginMessage m(*this);
+        m.add(FloatValue(ACT_POWERLIMIT,l));
+        publishMessage(m);
         actlimit = l;
     }
 
-    void internalDataCallback(PluginDataMessage *message) {
+    void internalDataCallback(PluginMessage *message) {
         if(message->has(PluginIds::PluginMeter,PluginMeterIds::ACPOWER_SUPPLY_ACTUAL)) {
             DPRINTLN(DBG_DEBUG, F("powercontroller got act supply"));
             actsupply = message->getFloatValueById(PluginMeterIds::ACPOWER_SUPPLY_ACTUAL);

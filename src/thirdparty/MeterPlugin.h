@@ -31,7 +31,9 @@ public:
 
     void publishAC() {
         DPRINTLN(DBG_DEBUG, F("meter.publishAC"));
-        publishInternalValue(ValueEntry(ACPOWER_SUPPLY_ACTUAL,acsupplyact));
+        PluginMessage m(*this);
+        m.add(FloatValue(ACPOWER_SUPPLY_ACTUAL,acsupplyact));
+        publishMessage(m);
     }
 
     private:

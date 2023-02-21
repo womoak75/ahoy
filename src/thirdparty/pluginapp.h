@@ -201,13 +201,10 @@ public:
             every(timerCb, interval, timername);
         }
     }
-    void publishInternalValues(Plugin *sender, std::initializer_list<ValueEntry>& elements) {
-        msgs.push(std::make_shared<PluginDataMessage>(PluginDataMessage(sender->getId(),elements)));
+    void publishMessage(Plugin *sender, PluginMessage& _message) {
+        msgs.push(std::make_shared<PluginMessage>(_message)); 
     }
-    void publishInternalValue(Plugin *sender, ValueEntry value) {
-        msgs.push(std::make_shared<PluginDataMessage>(PluginDataMessage(sender->getId(),value)));
-    }
-    virtual const Plugin *getPluginById(int pluginid) 
+    virtual Plugin *getPluginById(int pluginid) 
     {
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
@@ -219,7 +216,7 @@ public:
         return NULL;
     }
 
-    virtual const Plugin *getPluginByName(const char *pluginname)
+    virtual Plugin *getPluginByName(const char *pluginname)
     {
         for (unsigned int i = 0; i < plugins.size(); i++)
         {
@@ -319,22 +316,37 @@ private:
         request->send(response);
     }
 
+    void publishToReceiver(PluginMessage* mes) {
+        Plugin* p = getPluginById(mes->getReceiverId());
+        if(NULL != p && p->isEnabled()) {
+            p->internalDataCallback(mes);
+        }
+    }
+
+    void publishToAll(PluginMessage* message) {
+        int pluginid = message->getSenderId();
+        for (unsigned int i = 0; i < plugins.size(); i++)
+        {
+            if (plugins[i]->getId() != pluginid)
+            {
+                if(plugins[i]->isEnabled())
+                    plugins[i]->internalDataCallback(message);
+            }
+        }
+    }
+
     void publishInternal()
     {
         while(!msgs.empty()) {
             auto message = msgs.front();
-            int pluginid = message->getPluginId();
-            if(message->isDataMessage()) {
-                auto datamessage = std::static_pointer_cast<PluginDataMessage>(message);
-                for (unsigned int i = 0; i < plugins.size(); i++)
-                {
-                    if (plugins[i]->getId() != pluginid)
-                    {
-                        if(plugins[i]->isEnabled())
-                            plugins[i]->internalDataCallback(datamessage.get());
-                    }
+            if(message->hasData()) {
+                if(message->getReceiverId()!=0) {
+                    publishToReceiver(message.get());
+                } else {
+                    publishToAll(message.get());
                 }
             } else {
+                int pluginid = message.get()->getSenderId();
                 for (unsigned int i = 0; i < plugins.size(); i++)
                 {
                     if (plugins[i]->getId() != pluginid)
