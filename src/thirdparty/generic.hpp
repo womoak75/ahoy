@@ -15,40 +15,22 @@ struct EntityIds;
 class Entity
 {
 public:
-    Entity(int tpid) : type_id(tpid) {}
-    // need some virtual for polymorphism :/
-    virtual void x() {}
+    Entity(int tpid)  : type_id(tpid), _id(-1) {}
+    Entity(int tpid, int id) : type_id(tpid), _id(id) {}
+    virtual int getId() { return _id; }
     int type_id;
-};
-
-class IdEntity
-{
-public:
-    IdEntity(int tpid) : type_id(tpid) {}
-    virtual int getId() { return 0; }
-    int type_id;
+    int _id;
 };
 
 template <typename T, unsigned int tpid>
 class Data : public Entity
 {
 public:
-    Data(T &v) : Entity(tpid) , value(v) {}
-    Data(T &&v) : Entity(tpid) , value(move(v)) {}
-    Data(const T &v) : Entity(tpid) , value(v) {}
+    Data(T &v) : Entity(tpid,-1) , value(v) {}
+    Data(int id, T &v) : Entity(tpid,id) , value(v) {}
+    Data(int id, T &&v) : Entity(tpid,id) , value(std::move(v)) {}
+    Data(const int id, const T &v) : Entity(tpid,id) , value(v) {}
     T value;
-};
-
-template <typename T, int tpid>
-class IdData : public Data<T,tpid> , public IdEntity
-{
-public:
-    IdData(int id, T &v) : Data<T,tpid>(v) , IdEntity(tpid), _id(id){}
-    IdData(int id, T &&v) : Data<T,tpid>((v)),  IdEntity(tpid), _id(id) {}
-    IdData(const int id, const T &v) : Data<T,tpid>(v),  IdEntity(tpid), _id(id) {}
-    int getId() { return _id; }
-    int _id;
-
 };
 
 template <typename BASE>

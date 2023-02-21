@@ -13,25 +13,25 @@ enum TYPEIDS {
     PLUGINMESSAGE_TYPE
 };
 
-typedef IdData<float,FLOATVALUE_TYPE> FloatValue;
+typedef Data<float,FLOATVALUE_TYPE> FloatValue;
 template <>
 struct EntityIds<FloatValue>
 {
     enum { type_id = TYPEIDS::FLOATVALUE_TYPE };
 };
-typedef IdData<bool,BOOLVALUE_TYPE> BoolValue;
+typedef Data<bool,BOOLVALUE_TYPE> BoolValue;
 template <>
 struct EntityIds<BoolValue>
 {
     enum { type_id = TYPEIDS::BOOLVALUE_TYPE };
 };
-typedef IdData<int,INTVALUE_TYPE> IntValue;
+typedef Data<int,INTVALUE_TYPE> IntValue;
 template <>
 struct EntityIds<IntValue>
 {
     enum { type_id = TYPEIDS::INTVALUE_TYPE };
 };
-typedef IdData<String,STRINGVALUE_TYPE> StringValue;
+typedef Data<String,STRINGVALUE_TYPE> StringValue;
 template <>
 struct EntityIds<StringValue>
 {
@@ -43,7 +43,6 @@ struct EntityIds<PluginMessage>
 {
     enum { type_id = TYPEIDS::PLUGINMESSAGE_TYPE };
 };
-
 
 //class Message;
 enum class METADATAIDS { SENDERID, RECEIVERID, EMPTY_TAG};
@@ -298,7 +297,7 @@ private:
 };
 
 
-class PluginMessage :  public ContainerVector<IdEntity>, public Entity {
+class PluginMessage :  public ContainerVector<Entity>, public Entity {
 
     public:
     PluginMessage(Plugin &plugin) : PluginMessage(plugin.getId(),0) {}
