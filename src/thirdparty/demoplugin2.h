@@ -24,9 +24,6 @@ public:
             enqueueMessage((char*)"out",(char*)"hello world!",false);
             enqueueMessage((char*)"out",(char*)"ahoi world!"); 
         },"demoplug2intimer2");
-        addTimerCb(SECOND,10,[this]{
-            DPRINTLN(DBG_INFO, F("free heap: ") + String(system_get_free_heap_size()));
-        },"heapcheck");
     }
     void onMqttSubscribe() {
         subscribeMqtt((char*)"external/topic",false);
