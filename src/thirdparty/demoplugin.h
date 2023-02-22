@@ -52,6 +52,7 @@ public:
     {   
         if(debugPluginMessages) {
             DBGPRINTMESSAGELN(DBG_INFO,message);
+            DBGPRINTMESSAGETAGSLN(DBG_INFO,message);
         }
     }
 

@@ -17,6 +17,7 @@ public:
             int val = (int)millis();
             PluginMessage m(*this);
             m.add(IntValue(SOMEOTHERPLUGINOUTPUT,val));
+            m.addTag(METADATA_TAGS::TESTTAG,BoolValue(true));
             publishMessage(m);
         },"demoplugin2timer1");
         addTimerCb(SECOND, 4, [this]() {

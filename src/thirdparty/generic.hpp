@@ -27,6 +27,7 @@ class Data : public Entity
 {
 public:
     Data(T &v) : Entity(tpid,-1) , value(v) {}
+    Data(T &&v) : Entity(tpid,-1) , value(std::move(v)) {}
     Data(int id, T &v) : Entity(tpid,id) , value(v) {}
     Data(int id, T &&v) : Entity(tpid,id) , value(std::move(v)) {}
     Data(const int id, const T &v) : Entity(tpid,id) , value(v) {}
@@ -94,37 +95,47 @@ class ContainerMap
 {
 public:
  
-    template <class K, class U>
-    void add(K &&key, U &&v)
+    template <class U>
+    void add(KEY &&key, U &&v)
     {
         map.insert({key,std::make_shared<U>((v))});
     }
 
-    template <typename K, typename T>
-    void add(K &key, T &v)
+    template <typename T>
+    void add(KEY &key, T &v)
     {
         map.insert({key,std::make_shared<T>((v))});
     }
 
-    template <typename T,typename K>
-    bool isValueType(K key)
+    template <typename T>
+    bool isValueType(KEY key)
     {
         return (EntityIds<T>::type_id == map[key].get()->type_id);
     }
-    template <typename K>
-    bool hasKey(K key)
+
+    bool hasKey(KEY key)
     {
         return (map.find(key) != map.end());
     }
 
-    template <typename U,typename K>
-    U &getValueAs(K key)
+    template <typename U>
+    U &getValueAs(KEY key)
     {
         auto v = std::static_pointer_cast<U>(map[key]);
         return *v.get();
     }
+
+    std::vector<KEY> getKeys() {
+        std::vector<KEY> keys;
+        for (auto it = map.begin(); it != map.end(); it++) {
+            keys.push_back(it->first);
+        }
+        return keys;
+    }
+
+    size_t getSize() { return map.size(); }
     
     std::unordered_map<KEY,std::shared_ptr<BASE>> map;
 };
 
-#endif // __GENERIC_HPP__
+#endif // __GENERIC_HPP_
