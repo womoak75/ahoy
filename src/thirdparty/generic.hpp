@@ -17,6 +17,7 @@ class Entity
 public:
     Entity(int tpid)  : type_id(tpid), _id(-1) {}
     Entity(int tpid, int id) : type_id(tpid), _id(id) {}
+    virtual ~Entity() {}
     virtual int getId() { return _id; }
     int type_id;
     int _id;
@@ -26,8 +27,8 @@ template <typename T, unsigned int tpid>
 class Data : public Entity
 {
 public:
-    Data(T &v) : Entity(tpid,-1) , value(v) {}
-    Data(T &&v) : Entity(tpid,-1) , value(std::move(v)) {}
+    Data(T &v) : Entity(tpid) , value(v) {}
+    Data(T &&v) : Entity(tpid) , value(std::move(v)) {}
     Data(int id, T &v) : Entity(tpid,id) , value(v) {}
     Data(int id, T &&v) : Entity(tpid,id) , value(std::move(v)) {}
     Data(const int id, const T &v) : Entity(tpid,id) , value(v) {}

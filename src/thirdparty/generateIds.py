@@ -2,13 +2,17 @@ import re
 import os
 import sys
 
-def writeFile(outf,pluginlist):
+def writeFile(outf,pluginlist,taglist):
     outfile = open(outf, "w")
     outfile.write("#ifndef __PLUGINIDS_H__\n")
     outfile.write("#define __PLUGINIDS_H__\n\n")
+    outfile.write("#ifndef NDEBUG\n")
     generateIds(outfile, pluginlist)
     generateValueIds(outfile, pluginlist)
     generateValueIdsString(outfile,pluginlist)
+    generateTagIds(outfile, taglist)
+    generateTagIdsString(outfile, taglist)
+    outfile.write("#endif // NDEBUG\n")
     generateDebugFunction(outfile, pluginlist)
     outfile.write("\n#endif /* __PLUGINIDS_H__ */\n")
     outfile.close
@@ -34,7 +38,27 @@ def generateValueIdsString(f,plist):
             f.write("const char Plugin"+p['pname'].capitalize()+enumval+"IdString[] PROGMEM = \""+enumval+"\";\n")
     f.write("const char PluginUnknown[] PROGMEM = \"unknown\";\n")
 
+def generateTagIds(f, taglist):
+    for p in taglist:
+        p = p.replace(" ","")
+        f.write("const char TAG_"+p+"_String[] PROGMEM = \""+p.capitalize()+"\";\n")
+    f.write("\n")
+    
+def generateTagIdsString(f, taglist):
+    f.write("const char* const getTagNameDebug(int id) {\n\tswitch(id){\n")
+    i = 0
+    for p in taglist:
+        p = p.replace(" ","")
+        f.write("\t\tcase "+str(i)+": return TAG_"+p+"_String;\n")
+        i+=1
+    f.write("\t\tdefault: return PluginUnknown;\n")
+    f.write("}\n}\n")
+    
 def generateDebugFunction(f,plist):
+    f.write("#ifdef NDEBUG\n")
+    f.write("#define DBGPRINTMESSAGETAGSLN(level,message)\n")
+    f.write("#define DBGPRINTMESSAGELN(level,message)\n")
+    f.write("#else\n")
     f.write("const char* const getPluginNameDebug(int pid) {\n\tswitch(pid){\n")
     for p in plist:
         f.write("\t\tcase "+p['pid']+": return Plugin"+p['pname'].capitalize()+"IdString;\n")
@@ -51,10 +75,6 @@ def generateDebugFunction(f,plist):
         f.write("}\n")
     f.write("\t\t\tdefault: return PluginUnknown;\n")
     f.write("}\n}\n")
-    f.write("#ifdef NDEBUG\n")
-    f.write("#define DBGPRINTMESSAGETAGSLN(level,message)\n")
-    f.write("#define DBGPRINTMESSAGELN(level,message)\n")
-    f.write("#else\n")
     f.write("#define DBGPRINTMESSAGELN(level,message) ({\\\n")
     f.write("       char msgbuffer[64];\\\n")
     f.write("         snprintf(msgbuffer,sizeof(msgbuffer),\"sender %s \",getPluginNameDebug(message->getSenderId()));\\\n")
@@ -80,15 +100,15 @@ def generateDebugFunction(f,plist):
     f.write("       auto keys = message->getMetaData().getKeys();\\\n")
     f.write("       for(auto index : keys) {\\\n")
     f.write("        if(message->getMetaData().isValueType<BoolValue>(index))\\\n")
-    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %d: bool %d\",static_cast<int>(index),message->getMetaData().getValueAs<BoolValue>(index).value);\\\n")
+    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %s: bool %d\",getTagNameDebug(static_cast<int>(index)),message->getMetaData().getValueAs<BoolValue>(index).value);\\\n")
     f.write("        else if(message->getMetaData().isValueType<FloatValue>(index))\\\n")
-    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %d: float %f\",static_cast<int>(index),message->getMetaData().getValueAs<FloatValue>(index).value);\\\n")
+    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %s: float %f\",getTagNameDebug(static_cast<int>(index)),message->getMetaData().getValueAs<FloatValue>(index).value);\\\n")
     f.write("        else if(message->getMetaData().isValueType<IntValue>(index))\\\n")
-    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %d: int %d\",static_cast<int>(index),message->getMetaData().getValueAs<IntValue>(index).value);\\\n")
+    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %s: int %d\",getTagNameDebug(static_cast<int>(index)),message->getMetaData().getValueAs<IntValue>(index).value);\\\n")
     f.write("        else if(message->getMetaData().isValueType<StringValue>(index))\\\n")
-    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %d: string %s\",static_cast<int>(index),message->getMetaData().getValueAs<StringValue>(index).value.c_str());\\\n")
+    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %s: string %s\",getTagNameDebug(static_cast<int>(index)),message->getMetaData().getValueAs<StringValue>(index).value.c_str());\\\n")
     f.write("        else\\\n")
-    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %d: unknown\",static_cast<int>(index));\\\n")
+    f.write("            snprintf(tagbuffer,sizeof(tagbuffer),\"TAG %s: unknown\",getTagNameDebug(static_cast<int>(index)));\\\n")
     f.write("       DPRINTLN(level,tagbuffer);\\\n")
     f.write("    }\\\n")
     f.write("  })\n")
@@ -104,6 +124,17 @@ def parseFile(fin):
     else:
         return None,None,None
 
+def parseFileEnum(fin):
+    f = open(fin, "r")
+    data = f.read().replace('\n', '')
+    #print(data)
+    x = re.search(r'(enum class METADATA_TAGS)\s+\{\s*([^\}]+)\s*\}(.*)', data)
+    if x:
+        return x.group(2)
+    else:
+        return None
+
+
 try:
     scriptdir = os.path.dirname(os.path.abspath(__file__))
 except NameError:
@@ -117,10 +148,15 @@ files = os.listdir(scriptdir)
 files = [scriptdir+'/'+f for f in files if os.path.isfile(scriptdir+'/'+f) & f.endswith('h')] 
 print(*files, sep="\n")
 pluginlist = list()
+taglist = None
 for f in files:
     pid, pname,enumvalue = parseFile(f)
+    tags = parseFileEnum(f)
     if pid != None:
         print(pid+":"+pname+":"+enumvalue)
         vids = enumvalue.split(",")
         pluginlist.append({'pid':pid,'pname':pname,'enumvalue':list(vids)})
-writeFile(gendir,pluginlist)
+    if tags != None:
+        print(tags)
+        taglist = tags.split(",")
+writeFile(gendir,pluginlist,taglist)
