@@ -1,3 +1,8 @@
+//-----------------------------------------------------------------------------
+// 2023 Ahoy, https://ahoydtu.de
+// Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
+//-----------------------------------------------------------------------------
+
 #ifndef __WEB_API_H__
 #define __WEB_API_H__
 
@@ -30,7 +35,9 @@ class RestApi {
     public:
         RestApi() {
             mTimezoneOffset = 0;
-            mFreeHeap = 0;
+            mHeapFree = 0;
+            mHeapFreeBlk = 0;
+            mHeapFrag = 0;
             nr = 0;
         }
 
@@ -55,7 +62,7 @@ class RestApi {
             serializeJson(obj, out, 128);
             DPRINTLN(DBG_INFO, "RestApi: " + String(out));*/
             DynamicJsonDocument json(128);
-            JsonObject dummy = json.to<JsonObject>();
+            JsonObject dummy = json.as<JsonObject>();
             if(obj[F("path")] == "ctrl")
                 setCtrl(obj, dummy);
             else if(obj[F("path")] == "setup")
@@ -64,7 +71,11 @@ class RestApi {
         restCb *mRestCb = nullptr;
     private:
         void onApi(AsyncWebServerRequest *request) {
-            mFreeHeap = ESP.getFreeHeap();
+            mHeapFree = ESP.getFreeHeap();
+            #ifndef ESP32
+            mHeapFreeBlk = ESP.getMaxFreeBlockSize();
+            mHeapFrag = ESP.getHeapFragmentation();
+            #endif
 
             AsyncJsonResponse* response = new AsyncJsonResponse(false, 4096);
             JsonObject root = response->getRoot();
@@ -90,6 +101,7 @@ class RestApi {
             else
                 getNotFound(root, F("http://") + request->host() + F("/api/"));
 
+            //DPRINTLN(DBG_INFO, "API mem usage: " + String(root.memoryUsage()));
             response->addHeader("Access-Control-Allow-Origin", "*");
             response->addHeader("Access-Control-Allow-Headers", "content-type");
             response->setLength();
@@ -200,7 +212,7 @@ class RestApi {
 
             obj[F("sdk")]          = ESP.getSdkVersion();
             obj[F("cpu_freq")]     = ESP.getCpuFreqMHz();
-            obj[F("heap_free")]    = mFreeHeap;
+            obj[F("heap_free")]    = mHeapFree;
             obj[F("sketch_total")] = ESP.getFreeSketchSpace();
             obj[F("sketch_used")]  = ESP.getSketchSize() / 1024; // in kb
             getGeneric(obj);
@@ -225,8 +237,8 @@ class RestApi {
             //obj[F("chip_cores")]    = F("n/a");
             obj[F("core_version")]  = ESP.getCoreVersion();
             obj[F("flash_size")]    = ESP.getFlashChipRealSize() / 1024; // in kb
-            obj[F("heap_frag")]     = ESP.getHeapFragmentation();
-            obj[F("max_free_blk")]  = ESP.getMaxFreeBlockSize();
+            obj[F("heap_frag")]     = mHeapFrag;
+            obj[F("max_free_blk")]  = mHeapFreeBlk;
             obj[F("reboot_reason")] = ESP.getResetReason();
         #endif
             //obj[F("littlefs_total")] = LittleFS.totalBytes();
@@ -510,7 +522,7 @@ class RestApi {
                     obj2[F("name")]               = String(iv->config->name);
                     obj2[F("channels")]           = iv->channels;
                     obj2[F("power_limit_read")]   = ah::round3(iv->actPowerLimit);
-                    obj2[F("last_alarm")]         = String(iv->lastAlarmMsg);
+                    //obj2[F("last_alarm")]         = String(iv->lastAlarmMsg);
                     obj2[F("ts_last_success")]    = rec->ts;
 
                     JsonArray ch = obj2.createNestedArray("ch");
@@ -637,7 +649,8 @@ class RestApi {
         settings_t *mConfig;
 
         uint32_t mTimezoneOffset;
-        uint32_t mFreeHeap;
+        uint32_t mHeapFree, mHeapFreeBlk;
+        uint8_t mHeapFrag;
         uint16_t nr;
 };
 

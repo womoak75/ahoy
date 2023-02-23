@@ -2,6 +2,28 @@
 
 (starting from release version `0.5.66`)
 
+## 0.5.90
+* merged PR #684, #698, #705
+* webserial minor overflow fix #660
+* web `index.html` improve version information #701
+* fix MQTT sets power limit to zero (0) #692
+* changed `reset at midnight` with timezone #697
+
+## 0.5.89
+* reduced heap fragmentation (removed `strtok` completely) #644, #645, #682
+* added part of mac address to MQTT client ID to seperate multiple ESPs in same network
+* added dictionary for MQTT to reduce heap-fragmentation
+* removed `last Alarm` from Live view, because it showed always the same alarm - will change in future
+
+## 0.5.88
+* MQTT Yield Day zero, next try to fix #671, thx @beegee3
+* added Solenso inverter to supported devices
+* improved reconnection of MQTT #650
+
+## 0.5.87
+* fix yield total correction as module (inverter input) value #570
+* reneabled instant start communication (once NTP is synced) #674
+
 ## 0.5.86
 * prevent send devcontrol request during disabled night communication
 * changed yield total correction as module (inverter input) value #570

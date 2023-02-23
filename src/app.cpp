@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// 2022 Ahoy, https://ahoydtu.de
+// 2023 Ahoy, https://ahoydtu.de
 // Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
 //-----------------------------------------------------------------------------
 
@@ -21,10 +21,19 @@ void app::setup() {
 
     resetSystem();
 
+    /*DBGPRINTLN("--- start");
+    DBGPRINTLN(String(ESP.getFreeHeap()));
+    DBGPRINTLN(String(ESP.getHeapFragmentation()));
+    DBGPRINTLN(String(ESP.getMaxFreeBlockSize()));*/
+
     setupSettings(&mSettings);
     mSettings.setup();
     mSettings.getPtr(mConfig);
-    DPRINTLN(DBG_INFO, F("Settings valid: ") + String((mSettings.getValid()) ? F("true") : F("false")));
+    DPRINT(DBG_INFO, F("Settings valid: "));
+    if(mSettings.getValid())
+        DBGPRINTLN(F("true"));
+    else
+        DBGPRINTLN(F("false"));
 
     mSys.enableDebug();
     mSys.setup(mConfig->nrf.amplifierPower, mConfig->nrf.pinIrq, mConfig->nrf.pinCe, mConfig->nrf.pinCs);
@@ -47,6 +56,11 @@ void app::setup() {
 
     mMiPayload.setup(this, &mSys, &mStat, mConfig->nrf.maxRetransPerPyld, &mTimestamp);
     mMiPayload.enableSerialDebug(mConfig->serial.debug);
+
+    /*DBGPRINTLN("--- after payload");
+    DBGPRINTLN(String(ESP.getFreeHeap()));
+    DBGPRINTLN(String(ESP.getHeapFragmentation()));
+    DBGPRINTLN(String(ESP.getMaxFreeBlockSize()));*/
 
     if(!mSys.Radio.isChipConnected())
         DPRINTLN(DBG_WARN, F("WARNING! your NRF24 module can't be reached, check the wiring"));
@@ -74,6 +88,12 @@ void app::setup() {
     mPubSerial.setup(mConfig, &mSys, &mTimestamp);
 
     regularTickers();
+
+
+    /*DBGPRINTLN("--- end setup");
+    DBGPRINTLN(String(ESP.getFreeHeap()));
+    DBGPRINTLN(String(ESP.getHeapFragmentation()));
+    DBGPRINTLN(String(ESP.getMaxFreeBlockSize()));*/
     setupCB(&mMqtt,&mWeb,&mApi);
 }
 
@@ -91,7 +111,11 @@ void app::loopStandard(void) {
             packet_t *p = &mSys.Radio.mBufCtrl.front();
 
             if (mConfig->serial.debug) {
-                DPRINT(DBG_INFO, "RX " + String(p->len) + "B Ch" + String(p->ch) + " | ");
+                DPRINT(DBG_INFO, F("RX "));
+                DBGPRINT(String(p->len));
+                DBGPRINT(F("B Ch"));
+                DBGPRINT(String(p->ch));
+                DBGPRINT(F(" | "));
                 mSys.Radio.dumpBuf(p->packet, p->len);
             }
             mStat.frmCnt++;
@@ -161,17 +185,18 @@ void app::tickNtpUpdate(void) {
     bool isOK = mWifi.getNtpTime();
     if (isOK || mTimestamp != 0) {
         if (mMqttReconnect && mMqttEnabled) {
-            mMqtt.connect();
+            mMqtt.tickerSecond();
             everySec(std::bind(&PubMqttType::tickerSecond, &mMqtt), "mqttS");
             everyMin(std::bind(&PubMqttType::tickerMinute, &mMqtt), "mqttM");
         }
 
         // only install schedulers once even if NTP wasn't successful in first loop
-        if(mMqttReconnect) { // @TODO: mMqttReconnect is wrong name here
+        if(mMqttReconnect) { // @TODO: mMqttReconnect is variable which scope has changed
             if(mConfig->inst.rstValsNotAvail)
                 everyMin(std::bind(&app::tickMinute, this), "tMin");
             if(mConfig->inst.rstYieldMidNight) {
-                uint32_t midTrig = mTimestamp - ((mTimestamp - 1) % 86400) + 86400; // next midnight
+                uint32_t localTime = gTimezone.toLocal(mTimestamp);
+                uint32_t midTrig = gTimezone.toUTC(localTime - (localTime % 86400) + 86400); // next midnight local time
                 onceAt(std::bind(&app::tickMidnight, this), midTrig, "midNi");
             }
         }
@@ -184,11 +209,11 @@ void app::tickNtpUpdate(void) {
         }
 
         // immediately start communicating
-        // @TODO: leads to reboot loops, everytime if there is no asynchronous function #674
-        /*if(isOK && mSendFirst) {
+        // @TODO: leads to reboot loops? not sure #674
+        if(isOK && mSendFirst) {
             mSendFirst = false;
             once(std::bind(&app::tickSend, this), 2, "senOn");
-        }*/
+        }
 
         mMqttReconnect = false;
     }
@@ -282,10 +307,9 @@ void app::tickMinute(void) {
 //-----------------------------------------------------------------------------
 void app::tickMidnight(void) {
     // only triggered if 'reset values at midnight is enabled'
-    uint32_t nxtTrig = mTimestamp - ((mTimestamp - 1) % 86400) + 86400; // next midnight
+    uint32_t localTime = gTimezone.toLocal(mTimestamp);
+    uint32_t nxtTrig = gTimezone.toUTC(localTime - (localTime % 86400) + 86400); // next midnight local time
     onceAt(std::bind(&app::tickMidnight, this), nxtTrig, "mid2");
-
-    DPRINTLN(DBG_INFO, "tickMidnight " + String(nxtTrig));
 
     Inverter<> *iv;
     // set values to zero, except yield total
@@ -305,13 +329,15 @@ void app::tickMidnight(void) {
 //-----------------------------------------------------------------------------
 void app::tickSend(void) {
     if(!mSys.Radio.isChipConnected()) {
-        DPRINTLN(DBG_WARN, "NRF24 not connected!");
+        DPRINTLN(DBG_WARN, F("NRF24 not connected!"));
         return;
     }
     if (mIVCommunicationOn) {
         if (!mSys.Radio.mBufCtrl.empty()) {
-            if (mConfig->serial.debug)
-                DPRINTLN(DBG_DEBUG, F("recbuf not empty! #") + String(mSys.Radio.mBufCtrl.size()));
+            if (mConfig->serial.debug) {
+                DPRINT(DBG_DEBUG, F("recbuf not empty! #"));
+                DBGPRINTLN(String(mSys.Radio.mBufCtrl.size()));
+            }
         }
 
         int8_t maxLoop = MAX_NUM_INVERTERS;

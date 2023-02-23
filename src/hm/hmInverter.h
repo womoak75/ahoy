@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// 2022 Ahoy, https://www.mikrocontroller.net/topic/525778
+// 2023 Ahoy, https://www.mikrocontroller.net/topic/525778
 // Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
 //-----------------------------------------------------------------------------
 
@@ -123,7 +123,7 @@ class Inverter {
         record_t<REC_TYP> recordInfo;    // structure for info values
         record_t<REC_TYP> recordConfig;  // structure for system config values
         record_t<REC_TYP> recordAlarm;   // structure for alarm values
-        String        lastAlarmMsg;
+        //String        lastAlarmMsg;
         bool          initialized;       // needed to check if the inverter was correctly added (ESP32 specific - union types are never null)
         bool          isConnected;       // shows if inverter was successfully identified (fw version and hardware info)
         inverterCb *mInverterCb = nullptr;
@@ -136,7 +136,7 @@ class Inverter {
             mDevControlRequest = false;
             devControlCmd      = InitDataState;
             initialized        = false;
-            lastAlarmMsg       = "nothing";
+            //lastAlarmMsg       = "nothing";
             alarmMesIndex      = 0;
             isConnected        = false;
         }
@@ -261,7 +261,7 @@ class Inverter {
                             // temperature is a signed value!
                             rec->record[pos] = (REC_TYP)((int16_t)val) / (REC_TYP)(div);
                         } else if (FLD_YT == rec->assign[pos].fieldId) {
-                            rec->record[pos] = ((REC_TYP)(val) / (REC_TYP)(div)) + ((REC_TYP)config->yieldCor[rec->assign[pos].ch]);
+                            rec->record[pos] = ((REC_TYP)(val) / (REC_TYP)(div)) + ((REC_TYP)config->yieldCor[rec->assign[pos].ch-1]);
                         } else {
                             if ((REC_TYP)(div) > 1)
                                 rec->record[pos] = (REC_TYP)(val) / (REC_TYP)(div);
@@ -302,9 +302,9 @@ class Inverter {
                 }
                 else if (rec->assign == AlarmDataAssignment) {
                     DPRINTLN(DBG_DEBUG, "add alarm");
-                    if (getPosByChFld(0, FLD_LAST_ALARM_CODE, rec) == pos){
-                        lastAlarmMsg = getAlarmStr(rec->record[pos]);
-                    }
+                    //if (getPosByChFld(0, FLD_LAST_ALARM_CODE, rec) == pos){
+                    //    lastAlarmMsg = getAlarmStr(rec->record[pos]);
+                    //}
                 }
                 else
                     DPRINTLN(DBG_WARN, F("add with unknown assginment"));
@@ -312,6 +312,11 @@ class Inverter {
             else
                 DPRINTLN(DBG_ERROR, F("addValue: assignment not found with cmd 0x"));
         }
+
+        /*inline REC_TYP getPowerLimit(void) {
+            record_t<> *rec = getRecordStruct(SystemConfigPara);
+            return getChannelFieldValue(CH0, FLD_ACT_ACTIVE_PWR_LIMIT, rec);
+        }*/
 
         bool setValue(uint8_t pos, record_t<> *rec, REC_TYP val) {
             DPRINTLN(DBG_VERBOSE, F("hmInverter.h:setValue"));

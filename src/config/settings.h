@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------------
-// 2022 Ahoy, https://ahoydtu.de
+// 2023 Ahoy, https://ahoydtu.de
 // Creative Commons - http://creativecommons.org/licenses/by-nc-sa/3.0/de/
 //-----------------------------------------------------------------------------
 
@@ -219,7 +219,6 @@ class settings {
         }
 
         bool readSettings(const char* path) {
-            bool success = false;
             loadDefaults();
             File fp = LittleFS.open(path, "r");
             if(!fp)
@@ -240,7 +239,7 @@ class settings {
                     jsonLed(root[F("led")]);
                     jsonPlugin(root[F("plugin")]);
                     jsonInst(root[F("inst")]);
-                    success = true;
+
                     if(nullptr != mSettingsCb) {
                         mSettingsCb->onLoadSettings(root);
                     }
@@ -251,7 +250,7 @@ class settings {
 
                 fp.close();
             }
-            return success;
+            return mCfg.valid;
         }
 
         bool saveSettings(void) {
